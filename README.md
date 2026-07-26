@@ -1,5 +1,11 @@
 # Garden
 
+> [!WARNING]
+> **Work in progress.** Garden is an experimental Eve compatibility runtime.
+> Its filesystem discovery and durable local workflow paths are usable, but
+> TypeScript tool execution, real model calls, and production workflow storage
+> are not implemented yet.
+
 Garden is an independent Go compatibility runtime for
 [Vercel eve](https://github.com/vercel/eve). It keeps the filesystem-first
 authoring model while moving the durable runtime into one dependency-free Go
