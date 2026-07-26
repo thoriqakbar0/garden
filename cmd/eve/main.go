@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -35,6 +36,8 @@ func run(args []string) error {
 		return initProject(args[1:])
 	case "info":
 		return info(args[1:])
+	case "run":
+		return runOnce(args[1:])
 	case "serve", "dev", "start":
 		return serve(args[1:])
 	case "build":
@@ -55,6 +58,7 @@ func usage() error {
 Usage:
   eve init [directory]
   eve info [--root directory]
+  eve run [--root directory] --message text [--session id]
   eve serve [--root directory] [--addr :3000]
   eve build [--root directory]
   eve eval [--root directory] --list
@@ -107,6 +111,38 @@ func info(args []string) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(app)
+}
+
+func runOnce(args []string) error {
+	flags := flag.NewFlagSet("run", flag.ContinueOnError)
+	root := flags.String("root", ".", "project root")
+	message := flags.String("message", "", "message to send")
+	sessionID := flags.String("session", "", "existing session id")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *message == "" {
+		return errors.New("run requires a non-empty --message")
+	}
+	if _, err := discover.ApplicationAt(*root); err != nil {
+		return err
+	}
+	store, err := workflow.Open(filepath.Join(*root, ".eve", "workflow-data"), workflow.EchoResponder)
+	if err != nil {
+		return err
+	}
+	id := *sessionID
+	if id == "" {
+		id, err = store.CreateSession()
+		if err != nil {
+			return err
+		}
+	}
+	result, err := store.Send(context.Background(), id, *message)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
 func serve(args []string) error {

@@ -27,6 +27,7 @@ dispatch, and cancellation.
 ```sh
 go build -o garden ./cmd/eve
 ./garden info
+./garden run --message "hello"
 ./garden serve --addr :3000
 ```
 
@@ -35,6 +36,10 @@ The local runtime is deterministic: a turn replies
 without model credentials. AI Gateway calls, authored TypeScript tool
 execution, sandbox backends, production-durable Vercel storage, channel
 adapters, approvals, and subagent execution are not ported yet.
+
+The runnable [Eve weather example](examples/eve-weather/README.md) carries the
+official fixture shape and can be inspected, run once, or served with the same
+binary.
 
 ## HTTP
 
@@ -56,5 +61,5 @@ external workflow store.
 ## Upstream baseline
 
 The initial port was checked against `vercel/eve` main at
-`05f348023d4268c974c225c1189a283ace20b742` on 2026-07-26. No upstream source
-code is vendored; `NOTICE` records attribution under Apache-2.0.
+`05f348023d4268c974c225c1189a283ace20b742` on 2026-07-26. `NOTICE` records
+attribution for the adapted weather fixture under Apache-2.0.
