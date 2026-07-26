@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/eve/v1/:path*",
+      "destination": "/api/eve?path=:path*"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/eve/v1/schedules/heartbeat/dispatch",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

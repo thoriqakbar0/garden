@@ -1,0 +1,6 @@
+Garden
+Copyright 2026 Thoriq Akbar
+
+This project independently reimplements behavior described and tested by
+Vercel's eve project (https://github.com/vercel/eve), licensed under the
+Apache License 2.0. No Vercel source code is included.
