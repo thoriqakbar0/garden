@@ -10,6 +10,11 @@ CLI, HTTP API, and Vercel Go Function adapter in one binary.
 > local workflows. It does not execute authored TypeScript, call language
 > models, or provide production-grade distributed storage yet.
 
+The target product contract and worktree-integration gates live in
+[`specs/`](specs/README.md). Those specifications describe the intended
+Vercel-free Eve runner and do not imply that candidate task work is already
+available on `main`.
+
 Garden is useful today as a compatibility harness: it can inspect an Eve agent,
 exercise session lifecycle behavior without credentials, stress durable event
 storage, and expose the same local runtime through a command or HTTP server.
