@@ -6,18 +6,18 @@ filesystem-first project shape and provides a small durable workflow runtime,
 CLI, HTTP API, and Vercel Go Function adapter in one binary.
 
 > [!WARNING]
-> **Work in progress.** Garden can discover Eve projects and run deterministic
-> local workflows. It does not execute authored TypeScript, call language
-> models, or provide production-grade distributed storage yet.
+> **Work in progress.** Garden can discover Eve projects and execute model-backed
+> local workflows through a small supported native-tool manifest. It does not
+> execute authored TypeScript or provide production-grade distributed storage.
 
 The target product contract and worktree-integration gates live in
 [`specs/`](specs/README.md). Those specifications describe the intended
 Vercel-free Eve runner and do not imply that candidate task work is already
 available on `main`.
 
-Garden is useful today as a compatibility harness: it can inspect an Eve agent,
-exercise session lifecycle behavior without credentials, stress durable event
-storage, and expose the same local runtime through a command or HTTP server.
+Garden is useful today as a compatibility harness and initial agent runner: it
+can inspect an Eve agent, run a model → native tool → model turn, stress durable
+event storage, and expose the same runner through a command or HTTP server.
 
 ## What works
 
@@ -33,8 +33,8 @@ storage, and expose the same local runtime through a command or HTTP server.
 | Schedule dispatch | Partial | Creates a durable session for a known schedule; it does not execute the authored schedule body. |
 | Eval discovery | Available | Lists authored `.eval.ts` and `.eval.js` files. |
 | Eval execution | Not implemented | Use the native Go compatibility tests for now. |
-| TypeScript tools and skills | Discovery only | Names and files are discovered, but JavaScript/TypeScript is not evaluated. |
-| Model providers and AI Gateway | Not implemented | Turns use a deterministic local responder. |
+| TypeScript tools and skills | Discovery plus native binding | Source is not evaluated. A discovered tool runs only when its ID has a compiled native implementation; unsupported declarations fail startup. |
+| Model providers | Available | Supports OpenAI Chat Completions-compatible endpoints and the local Codex auth cache/Responses endpoint. |
 | Vercel deployment | Experimental | Emits routing and cron configuration for the included Go handler; storage remains ephemeral. |
 
 ## Quickstart
@@ -57,24 +57,31 @@ The output identifies the authored model, `get_weather` tool, and
 `get-weather` skill. Run a durable local turn:
 
 ```sh
+export GARDEN_MODEL_BACKEND=openai
+export GARDEN_OPENAI_BASE_URL=https://api.openai.com/v1
+export GARDEN_OPENAI_API_KEY=...
+export GARDEN_MODEL=gpt-5.4
+
 ./garden run \
   --root examples/eve-weather \
   --message "What is the weather in Jakarta?"
 ```
 
-Garden returns a JSON result:
+Garden makes a real model request, executes the native deterministic
+`get_weather` implementation when requested, makes the correlated follow-up
+model request, and returns a JSON result:
 
 ```json
 {
   "sessionId": "session_<generated-id>",
   "turnId": "turn_<generated-id>",
-  "message": "stress-ack:1:What is the weather in Jakarta?"
+  "message": "It is sunny in Jakarta."
 }
 ```
 
 Pass the returned session ID back with `--session` to continue the same
-conversation. The next response uses `stress-ack:2:...`, proving that the
-workflow history survived the process boundary.
+conversation. Garden includes prior completed user and assistant messages in
+the next model request.
 
 ```sh
 ./garden run \
@@ -83,9 +90,44 @@ workflow history survived the process boundary.
   --message "And tomorrow?"
 ```
 
-The deterministic `stress-ack` response is intentional. It tests workflow
-behavior without hiding a model call or pretending that the TypeScript weather
-tool ran.
+Normal `run` and `serve` never fall back to an echo response. Missing or invalid
+model configuration fails clearly.
+
+## Model configuration
+
+Select a backend explicitly with `GARDEN_MODEL_BACKEND`.
+
+| Variable | Meaning |
+| --- | --- |
+| `GARDEN_MODEL_BACKEND` | Required: `openai` or `codex`. |
+| `GARDEN_MODEL` | Optional model override. For `openai`, the authored model is used when this is unset. For `codex`, the default is `gpt-5.6-sol`; bare `gpt-*` and `openai/gpt-*` IDs are accepted. |
+| `GARDEN_OPENAI_BASE_URL` | OpenAI Chat Completions-compatible API base. If only an API key is set, defaults to `https://api.openai.com/v1`. |
+| `GARDEN_OPENAI_API_KEY` | Optional bearer credential for the compatible endpoint. |
+| `CODEX_HOME` | Codex state directory, default `~/.codex`. Garden reads `auth.json` created by `codex login`. |
+| `GARDEN_CODEX_BASE_URL` | Optional alternate Responses API base, primarily for compatible/self-hosted endpoints. |
+
+For a local ChatGPT subscription session:
+
+```sh
+codex login
+export GARDEN_MODEL_BACKEND=codex
+./garden run --root examples/eve-weather --message "What is the weather in Jakarta?"
+```
+
+The Codex backend supports both API-key and ChatGPT-token forms written by the
+Codex CLI and honors its `auth_mode` preference when that credential is usable.
+Garden never logs credentials or upstream response bodies. This slice does not
+refresh ChatGPT tokens; an expired or rejected token returns a precise error
+instructing you to run `codex login` again.
+
+Model requests, responses, tool inputs, tool outputs, and `auth.json` are
+limited to 1 MiB. Each model or tool step has a 60-second deadline, and a turn
+is limited to eight model rounds.
+
+Garden's compiled native manifest currently contains only `get_weather`. It
+returns deterministic fixture data to prove the execution boundary; it is not
+live meteorological data. Any other discovered tool causes `run` and `serve`
+startup to fail rather than pretending the authored TypeScript is executable.
 
 ## Run the HTTP server
 
@@ -174,7 +216,7 @@ definitions, or execute authored code.
 | --- | --- |
 | `garden init [directory]` | Creates `agent/instructions.md` and `agent/agent.ts`; refuses to overwrite either file. |
 | `garden info [--root directory]` | Prints the discovered application as formatted JSON. |
-| `garden run --message text [--root directory] [--session id]` | Creates or resumes a durable session and runs one deterministic turn. |
+| `garden run --message text [--root directory] [--session id]` | Creates or resumes a durable session and runs one configured model turn. |
 | `garden serve [--root directory] [--addr :3000]` | Starts the HTTP runtime. |
 | `garden dev ...` | Alias of `serve`; no file watcher or TUI is implemented. |
 | `garden start ...` | Alias of `serve`. |
@@ -209,13 +251,16 @@ Garden stores each session as an append-only file:
 .eve/workflow-data/sessions/<session-id>.jsonl
 ```
 
-A successful turn appends these event types in order:
+A successful turn appends these public completion events in order:
 
 ```text
 turn.started
 message.completed
 turn.completed
 ```
+
+Model turns may durably interleave internal `assistant.tool_calls` and
+`tool.completed` records before the final completion events.
 
 New sessions begin with `session.started`. Failed and cancelled turns append
 `turn.failed` or `turn.cancelled` instead of a completion event.
@@ -260,11 +305,11 @@ official Vercel Eve weather fixture. It includes:
 - an authored model definition;
 - concise weather-agent instructions;
 - a markdown weather skill;
-- a typed `get_weather` tool;
+- a typed `get_weather` declaration bound to Garden's native implementation;
 - a Go compatibility test proving Garden discovers the expected shape.
 
-The example is included to test compatibility. Garden does not currently run
-its TypeScript tool.
+Garden does not evaluate the example's TypeScript. The discovered
+`get_weather` ID selects the corresponding native Go tool.
 
 ## Development
 
@@ -285,6 +330,9 @@ The native tests cover:
 - 50 concurrent isolated sessions;
 - replay from a non-zero event index;
 - active and stale-turn cancellation;
+- hermetic OpenAI-compatible model → weather tool → model execution;
+- malformed/undeclared tool rejection and secret-safe failures;
+- local Codex API-key and ChatGPT-token transport behavior;
 - HTTP session, turn, replay, and schedule dispatch;
 - Vercel route and cron generation;
 - discovery of the included official-shaped example.
@@ -296,6 +344,7 @@ api/eve.go                 Vercel Go Function adapter
 cmd/eve/main.go            CLI composition root
 examples/eve-weather/      Runnable Eve-shaped compatibility fixture
 internal/discover/         Filesystem discovery
+internal/agent/            Model adapters, native tools, and execution loop
 internal/server/           HTTP adapter
 internal/vercel/           vercel.json generation
 internal/workflow/         Durable local event store

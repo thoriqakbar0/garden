@@ -46,6 +46,20 @@ const (
 // Responder computes an assistant message. It must honor context cancellation.
 type Responder func(context.Context, string, []Event) (string, error)
 
+type stepRecorderKey struct{}
+
+// RecordStep durably records internal execution state when called from a responder.
+func RecordStep(ctx context.Context, eventType string, data any) error {
+	recorder, ok := ctx.Value(stepRecorderKey{}).(func(string, any) error)
+	if !ok {
+		return errors.New("workflow step recorder is unavailable")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return recorder(eventType, data)
+}
+
 // Store owns durable session logs and in-process turn concurrency.
 type Store struct {
 	root      string
@@ -63,7 +77,7 @@ type activeTurn struct {
 // Open creates or opens a workflow store.
 func Open(root string, responder Responder) (*Store, error) {
 	if responder == nil {
-		responder = EchoResponder
+		return nil, errors.New("workflow responder is required")
 	}
 	if err := os.MkdirAll(filepath.Join(root, "sessions"), 0o700); err != nil {
 		return nil, fmt.Errorf("create workflow store: %w", err)
@@ -76,7 +90,7 @@ func Open(root string, responder Responder) (*Store, error) {
 	}, nil
 }
 
-// EchoResponder provides a deterministic local runtime with Eve stress-fixture semantics.
+// EchoResponder is an explicit deterministic workflow diagnostic and test seam.
 func EchoResponder(_ context.Context, message string, history []Event) (string, error) {
 	turn := 1
 	for _, event := range history {
@@ -128,6 +142,10 @@ func (s *Store) Send(ctx context.Context, sessionID, message string) (TurnResult
 	if _, err := s.append(sessionID, turnID, "turn.started", map[string]string{"message": message}); err != nil {
 		return TurnResult{}, err
 	}
+	turnContext = context.WithValue(turnContext, stepRecorderKey{}, func(eventType string, data any) error {
+		_, err := s.append(sessionID, turnID, eventType, data)
+		return err
+	})
 	history, err := s.Replay(sessionID, 0)
 	if err != nil {
 		return TurnResult{}, err
