@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/thoriqakbar0/garden/internal/agent"
 	"github.com/thoriqakbar0/garden/internal/discover"
 	"github.com/thoriqakbar0/garden/internal/server"
 	"github.com/thoriqakbar0/garden/internal/workflow"
@@ -30,7 +31,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			runtime = errorHandler(err)
 			return
 		}
-		store, err := workflow.Open(filepath.Join(os.TempDir(), "garden"), workflow.EchoResponder)
+		responder, err := agent.ResponderFromEnvironment(app)
+		if err != nil {
+			runtime = errorHandler(err)
+			return
+		}
+		store, err := workflow.Open(filepath.Join(os.TempDir(), "garden"), responder)
 		if err != nil {
 			runtime = errorHandler(err)
 			return

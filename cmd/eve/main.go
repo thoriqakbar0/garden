@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/thoriqakbar0/garden/internal/agent"
 	"github.com/thoriqakbar0/garden/internal/discover"
 	"github.com/thoriqakbar0/garden/internal/server"
 	"github.com/thoriqakbar0/garden/internal/vercel"
@@ -124,10 +125,15 @@ func runOnce(args []string) error {
 	if *message == "" {
 		return errors.New("run requires a non-empty --message")
 	}
-	if _, err := discover.ApplicationAt(*root); err != nil {
+	app, err := discover.ApplicationAt(*root)
+	if err != nil {
 		return err
 	}
-	store, err := workflow.Open(filepath.Join(*root, ".eve", "workflow-data"), workflow.EchoResponder)
+	responder, err := agent.ResponderFromEnvironment(app)
+	if err != nil {
+		return err
+	}
+	store, err := workflow.Open(filepath.Join(*root, ".eve", "workflow-data"), responder)
 	if err != nil {
 		return err
 	}
@@ -154,7 +160,11 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
-	store, err := workflow.Open(filepath.Join(root, ".eve", "workflow-data"), workflow.EchoResponder)
+	responder, err := agent.ResponderFromEnvironment(app)
+	if err != nil {
+		return err
+	}
+	store, err := workflow.Open(filepath.Join(root, ".eve", "workflow-data"), responder)
 	if err != nil {
 		return err
 	}
