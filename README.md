@@ -1,23 +1,19 @@
 # Garden
 
-Garden is an experimental, dependency-free Go runtime for
-[Vercel eve](https://github.com/vercel/eve) agent projects. It reads Eve's
-filesystem-first project shape and provides a small durable workflow runtime,
-CLI, HTTP API, and Vercel Go Function adapter in one binary.
+Garden is an experimental, dependency-free Go runner for
+[Vercel Eve](https://github.com/vercel/eve)-shaped agent projects. It discovers
+an agent from the filesystem, runs model and native-tool turns locally, and
+persists workflow events as JSONL. The same runtime is available through a CLI
+and HTTP API.
 
 > [!WARNING]
 > **Work in progress.** Garden can discover Eve projects and execute model-backed
 > local workflows through a small supported native-tool manifest. It does not
 > execute authored TypeScript or provide production-grade distributed storage.
 
-The target product contract and worktree-integration gates live in
-[`specs/`](specs/README.md). Those specifications describe the intended
-Vercel-free Eve runner and do not imply that candidate task work is already
-available on `main`.
-
-Garden is useful today as a compatibility harness and initial agent runner: it
-can inspect an Eve agent, run a model → native tool → model turn, stress durable
-event storage, and expose the same runner through a command or HTTP server.
+The table below describes the current `main` branch. The target product contract
+and integration gates live in [`specs/`](specs/README.md); those specifications
+may describe work that has not landed yet.
 
 ## What works
 
@@ -54,14 +50,12 @@ Inspect the included Eve weather agent:
 ```
 
 The output identifies the authored model, `get_weather` tool, and
-`get-weather` skill. Run a durable local turn:
+`get-weather` skill. Authenticate with the Codex CLI, then run a durable local
+turn using the same local credential:
 
 ```sh
-export GARDEN_MODEL_BACKEND=openai
-export GARDEN_OPENAI_BASE_URL=https://api.openai.com/v1
-export GARDEN_OPENAI_API_KEY=...
-export GARDEN_MODEL=gpt-5.4
-
+codex login
+export GARDEN_MODEL_BACKEND=codex
 ./garden run \
   --root examples/eve-weather \
   --message "What is the weather in Jakarta?"
@@ -95,22 +89,28 @@ model configuration fails clearly.
 
 ## Model configuration
 
-Select a backend explicitly with `GARDEN_MODEL_BACKEND`.
+Select a backend explicitly with `GARDEN_MODEL_BACKEND`. Use `codex` with the
+local credential written by `codex login`, or use `openai` with any compatible
+Chat Completions endpoint.
 
 | Variable | Meaning |
 | --- | --- |
 | `GARDEN_MODEL_BACKEND` | Required: `openai` or `codex`. |
 | `GARDEN_MODEL` | Optional model override. For `openai`, the authored model is used when this is unset. For `codex`, the default is `gpt-5.6-sol`; bare `gpt-*` and `openai/gpt-*` IDs are accepted. |
-| `GARDEN_OPENAI_BASE_URL` | OpenAI Chat Completions-compatible API base. If only an API key is set, defaults to `https://api.openai.com/v1`. |
-| `GARDEN_OPENAI_API_KEY` | Optional bearer credential for the compatible endpoint. |
+| `GARDEN_OPENAI_BASE_URL` | OpenAI Chat Completions-compatible API base. Defaults to `https://api.openai.com/v1` when an API key is set. |
+| `GARDEN_OPENAI_API_KEY` | Optional bearer credential. It is required by OpenAI, but may be omitted for a local endpoint that does not require authentication. |
 | `CODEX_HOME` | Codex state directory, default `~/.codex`. Garden reads `auth.json` created by `codex login`. |
 | `GARDEN_CODEX_BASE_URL` | Optional alternate Responses API base, primarily for compatible/self-hosted endpoints. |
 
-For a local ChatGPT subscription session:
+To use an OpenAI-compatible endpoint instead:
 
 ```sh
-codex login
-export GARDEN_MODEL_BACKEND=codex
+export GARDEN_MODEL_BACKEND=openai
+export GARDEN_OPENAI_API_KEY=...
+export GARDEN_MODEL=gpt-5.4-mini
+# Optional for OpenAI; required for another compatible endpoint.
+export GARDEN_OPENAI_BASE_URL=https://api.openai.com/v1
+
 ./garden run --root examples/eve-weather --message "What is the weather in Jakarta?"
 ```
 
@@ -291,7 +291,8 @@ writes `vercel.json` with:
 - a rewrite from `/eve/v1/:path*` to `/api/eve`;
 - one Vercel cron entry for each discovered schedule with a literal cron value.
 
-This adapter is a deployment experiment, not a durable production runtime.
+This legacy adapter is a deployment experiment outside Garden's target
+local/self-hosted product boundary, not a durable production runtime.
 The handler writes workflow data under the function's temporary directory, so
 events can disappear between invocations and are not shared across instances.
 A production deployment needs an external workflow store before relying on
