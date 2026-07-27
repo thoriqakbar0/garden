@@ -26,6 +26,7 @@
     "prepare": "simple-git-hooks",
     "test": "pnpm test:unit && pnpm test:integration",
     "test:e2e": "turbo run test:e2e --concurrency=1",
+    "test:e2e:local": "turbo run test:e2e:local --concurrency=1",
     "test:integration": "turbo run test:integration",
     "test:scenario": "turbo run test:scenario",
     "test:unit": "turbo run test:unit",

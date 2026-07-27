@@ -30,6 +30,15 @@ script:
 pnpm test:e2e
 ```
 
+For acceptance checks that must run without provider credentials, use the
+locally runnable matrix. Fixture packages opt in by adding a `test:e2e:local`
+script; this keeps deterministic, mock-backed coverage first-class without
+dropping provider-backed scenarios from the full suite.
+
+```sh
+pnpm test:e2e:local
+```
+
 ## Vercel
 
 Vercel e2e uses the same fixture evals against immutable preview deployment

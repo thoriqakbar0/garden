@@ -70,6 +70,20 @@
       ],
       "outputs": []
     },
+    "test:e2e:local": {
+      "cache": false,
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!.eve/**",
+        "!.next/**",
+        "!.nuxt/**",
+        "!.output/**",
+        "!.svelte-kit/**",
+        "!.turbo/**",
+        "!node_modules/**"
+      ],
+      "outputs": []
+    },
     "test:integration": {
       "cache": false,
       "inputs": [

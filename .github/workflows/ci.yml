@@ -153,6 +153,36 @@ jobs:
       - name: Run scenario tests
         run: pnpm test:scenario
 
+  test-e2e-local:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: .nvmrc
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Discover e2e fixtures
+        run: .github/scripts/discover-e2e-fixtures.sh
+
+      - name: Build eve package
+        run: pnpm --filter eve run build
+
+      - name: Run locally runnable e2e fixtures
+        run: pnpm test:e2e:local
+
   test-tui:
     runs-on: ubuntu-latest
     env:
