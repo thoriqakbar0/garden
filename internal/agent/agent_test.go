@@ -42,7 +42,7 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 	defer upstream.Close()
 
 	app := weatherApplication(t)
-	responder, err := responderFromConfig(app, env(map[string]string{
+	runner, err := runnerFromConfig(app, env(map[string]string{
 		"GARDEN_MODEL_BACKEND":   "openai",
 		"GARDEN_OPENAI_BASE_URL": upstream.URL,
 		"GARDEN_MODEL":           "fake-model",
@@ -50,7 +50,7 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(t.TempDir(), responder)
+	store, err := workflow.OpenRunner(t.TempDir(), runner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,8 +90,67 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if events[len(events)-2].Type != "message.completed" {
-		t.Fatalf("final response was not persisted: %#v", events)
+	wantTail := []string{"actions.requested", "step.completed", "action.result", "step.started", "message.appended", "message.completed", "step.completed", "turn.completed", "session.waiting"}
+	if len(events) < len(wantTail) {
+		t.Fatalf("event count = %d, want at least %d", len(events), len(wantTail))
+	}
+	for index, want := range wantTail {
+		if got := events[len(events)-len(wantTail)+index].Type; got != want {
+			t.Fatalf("event tail[%d] = %q, want %q", index, got, want)
+		}
+	}
+}
+
+func TestRunnerEmitsEveToolLifecycle(t *testing.T) {
+	backend := &sequenceModel{results: []message{
+		{Role: "assistant", ToolCalls: []toolCall{{
+			ID: "weather-1", Name: "get_weather", Arguments: json.RawMessage(`{"city":"Jakarta"}`),
+		}}},
+		{Role: "assistant", Content: "Sunny."},
+	}}
+	runner, err := NewRunner(discover.Application{
+		Instructions: "test", Model: "model", Tools: []string{"get_weather"},
+	}, backend, "model", NativeManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var eventTypes []string
+	result, err := runner.Run(context.Background(), workflow.Turn{
+		SessionID: "ses_test", TurnID: "turn_test", Message: "Weather?", Sequence: 2,
+	}, func(eventType string, _ any) error {
+		eventTypes = append(eventTypes, eventType)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "Sunny." {
+		t.Fatalf("result = %q", result)
+	}
+	want := []string{
+		"step.started", "actions.requested", "step.completed", "action.result",
+		"step.started", "message.appended", "message.completed", "step.completed",
+	}
+	if fmt.Sprint(eventTypes) != fmt.Sprint(want) {
+		t.Fatalf("event types = %v, want %v", eventTypes, want)
+	}
+}
+
+func TestConversationExcludesInterruptedTurns(t *testing.T) {
+	events := []workflow.Event{
+		{Index: 0, Type: "message.received", TurnID: "turn_failed", Data: json.RawMessage(`{"message":"do not replay"}`)},
+		{Index: 1, Type: "actions.requested", TurnID: "turn_failed", Data: json.RawMessage(`{"actions":[{"callId":"call-1","input":{},"kind":"tool-call","toolName":"get_weather"}]}`)},
+		{Index: 2, Type: "turn.failed", TurnID: "turn_failed", Data: json.RawMessage(`{}`)},
+		{Index: 3, Type: "message.received", TurnID: "turn_ok", Data: json.RawMessage(`{"message":"keep"}`)},
+		{Index: 4, Type: "message.completed", TurnID: "turn_ok", Data: json.RawMessage(`{"message":"kept"}`)},
+		{Index: 5, Type: "turn.completed", TurnID: "turn_ok", Data: json.RawMessage(`{}`)},
+	}
+	messages, err := conversation(events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(messages) != 2 || messages[0].Content != "keep" || messages[1].Content != "kept" {
+		t.Fatalf("messages = %#v", messages)
 	}
 }
 
@@ -637,7 +696,7 @@ func assertCancelled(t *testing.T, responder workflow.Responder, started <-chan 
 	case <-time.After(2 * time.Second):
 		t.Fatal("step did not start")
 	}
-	if store.Cancel(session, "") != workflow.CancelAccepted {
+	if result, err := store.Cancel(context.Background(), session, ""); err != nil || result != workflow.CancelAccepted {
 		t.Fatal("turn cancellation was not accepted")
 	}
 	select {
