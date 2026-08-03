@@ -91,7 +91,7 @@ not silently return a diagnostic echo.
 | Variable | Meaning |
 | --- | --- |
 | `GARDEN_MODEL_BACKEND` | Required: `openai` or `codex`. |
-| `GARDEN_MODEL` | Optional model override. Otherwise Garden uses the literal model discovered in `agent/agent.ts`. |
+| `GARDEN_MODEL` | Optional model override. When unset, `openai` uses the literal model discovered in `agent/agent.ts`; `codex` defaults to `gpt-5.6-sol`. |
 | `GARDEN_OPENAI_BASE_URL` | OpenAI-compatible API base. Defaults to `https://api.openai.com/v1` when an API key is set. |
 | `GARDEN_OPENAI_API_KEY` | Optional bearer credential; local endpoints may omit it. |
 | `CODEX_HOME` | Codex state directory, default `~/.codex`. |
