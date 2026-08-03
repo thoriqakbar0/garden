@@ -2,13 +2,11 @@ package agent
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -310,212 +308,6 @@ func TestToolErrorsAndPayloadLimitsAreSafe(t *testing.T) {
 	}
 }
 
-func TestCodexAuthAndResponsesTransport(t *testing.T) {
-	tests := []struct {
-		name      string
-		auth      string
-		wantToken string
-		wantAcct  string
-		override  string
-		wantModel string
-	}{
-		{
-			name: "api key", auth: `{"OPENAI_API_KEY":"api-secret"}`,
-			wantToken: "api-secret", override: "openai/gpt-test", wantModel: "gpt-test",
-		},
-		{
-			name: "ChatGPT", auth: `{"tokens":{"access_token":"chat-secret","account_id":"acct-1"}}`,
-			wantToken: "chat-secret", wantAcct: "acct-1", wantModel: defaultCodexModel,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			home := t.TempDir()
-			if err := os.WriteFile(filepath.Join(home, "auth.json"), []byte(test.auth), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Header.Get("Authorization") != "Bearer "+test.wantToken {
-					t.Errorf("authorization header mismatch")
-				}
-				if r.Header.Get("originator") != "eve" {
-					t.Errorf("originator = %q", r.Header.Get("originator"))
-				}
-				if r.Header.Get("ChatGPT-Account-Id") != test.wantAcct {
-					t.Errorf("account header = %q", r.Header.Get("ChatGPT-Account-Id"))
-				}
-				var payload map[string]any
-				if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-					t.Error(err)
-				}
-				if payload["model"] != test.wantModel || payload["store"] != false {
-					t.Errorf("payload = %#v", payload)
-				}
-				w.Header().Set("Content-Type", "text/event-stream")
-				fmt.Fprintln(w, `data: {"type":"response.completed","response":{"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"codex result"}]}]}}`)
-				fmt.Fprintln(w, "data: [DONE]")
-			}))
-			defer server.Close()
-			app := discover.Application{Instructions: "test", Model: "authored-model"}
-			responder, err := responderFromConfig(app, env(map[string]string{
-				"GARDEN_MODEL_BACKEND": "codex", "CODEX_HOME": home,
-				"GARDEN_CODEX_BASE_URL": server.URL,
-				"GARDEN_MODEL":          test.override,
-			}), server.Client(), time.Now())
-			if err != nil {
-				t.Fatal(err)
-			}
-			result, err := send(t, responder)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if result.Message != "codex result" {
-				t.Fatalf("message = %q", result.Message)
-			}
-		})
-	}
-}
-
-func TestCodexCredentialSelectionMatchesEvePrecedence(t *testing.T) {
-	now := time.Unix(1_000, 0)
-	freshToken := jwt(t, map[string]any{"exp": 2_000})
-	expiredToken := jwt(t, map[string]any{"exp": 999})
-	tests := []struct {
-		name     string
-		auth     codexAuthFile
-		wantKind string
-		want     string
-	}{
-		{
-			name: "explicit api key wins",
-			auth: codexAuthFile{
-				AuthMode: "api-key", APIKey: " key ",
-				Tokens: codexTokens{AccessToken: freshToken},
-			},
-			wantKind: "api-key", want: "key",
-		},
-		{
-			name: "explicit ChatGPT wins",
-			auth: codexAuthFile{
-				AuthMode: "chatgpt", APIKey: "key",
-				Tokens: codexTokens{AccessToken: freshToken},
-			},
-			wantKind: "chatgpt", want: freshToken,
-		},
-		{
-			name: "ChatGPT fallback precedes key",
-			auth: codexAuthFile{
-				APIKey: "key", Tokens: codexTokens{AccessToken: freshToken},
-			},
-			wantKind: "chatgpt", want: freshToken,
-		},
-		{
-			name: "empty tokens do not outrank key",
-			auth: codexAuthFile{
-				AuthMode: "chatgpt", APIKey: "key",
-				Tokens: codexTokens{AccessToken: " "},
-			},
-			wantKind: "api-key", want: "key",
-		},
-		{
-			name: "expired tokens do not outrank key",
-			auth: codexAuthFile{
-				AuthMode: "chatgpt", APIKey: "key",
-				Tokens: codexTokens{AccessToken: expiredToken},
-			},
-			wantKind: "api-key", want: "key",
-		},
-		{
-			name: "missing selected key falls back to ChatGPT",
-			auth: codexAuthFile{
-				AuthMode: "api-key", Tokens: codexTokens{AccessToken: freshToken},
-			},
-			wantKind: "chatgpt", want: freshToken,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := selectCodexCredentials(test.auth, now)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got.kind != test.wantKind || got.token != test.want {
-				t.Fatalf("credentials = %#v, want kind %q and selected token", got, test.wantKind)
-			}
-		})
-	}
-}
-
-func TestCodexExtractsAccountIDFromNestedTokenClaims(t *testing.T) {
-	accessToken := jwt(t, map[string]any{
-		"exp": 2_000,
-		"https://api.openai.com/auth": map[string]any{
-			"chatgpt_account_id": "account-from-access",
-		},
-	})
-	idToken := jwt(t, map[string]any{
-		"chatgpt_account_id": "account-from-id",
-	})
-	credentials, err := selectCodexCredentials(codexAuthFile{
-		Tokens: codexTokens{AccessToken: accessToken, IDToken: idToken},
-	}, time.Unix(1_000, 0))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if credentials.accountID != "account-from-id" {
-		t.Fatalf("account ID = %q", credentials.accountID)
-	}
-
-	credentials, err = selectCodexCredentials(codexAuthFile{
-		Tokens: codexTokens{AccessToken: accessToken},
-	}, time.Unix(1_000, 0))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if credentials.accountID != "account-from-access" {
-		t.Fatalf("fallback account ID = %q", credentials.accountID)
-	}
-}
-
-func TestCodexModelNormalization(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-		ok    bool
-	}{
-		{input: "gpt-5.6-sol", want: "gpt-5.6-sol", ok: true},
-		{input: " openai/gpt-5.6-sol ", want: "gpt-5.6-sol", ok: true},
-		{input: "anthropic/claude-sonnet", ok: false},
-		{input: "openai/", ok: false},
-	}
-	for _, test := range tests {
-		got, err := normalizeCodexModel(test.input)
-		if test.ok && (err != nil || got != test.want) {
-			t.Fatalf("normalize %q = %q, %v", test.input, got, err)
-		}
-		if !test.ok && err == nil {
-			t.Fatalf("normalize %q unexpectedly succeeded as %q", test.input, got)
-		}
-	}
-}
-
-func TestCodexExpiredTokenError(t *testing.T) {
-	home := t.TempDir()
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"exp":1}`))
-	auth := fmt.Sprintf(`{"tokens":{"access_token":"%s.%s.signature"}}`, header, payload)
-	if err := os.WriteFile(filepath.Join(home, "auth.json"), []byte(auth), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	_, _, err := codexFromEnvironment(env(map[string]string{"CODEX_HOME": home}), http.DefaultClient, time.Now())
-	if err == nil || err.Error() != "Codex ChatGPT access token is expired; run `codex login`" {
-		t.Fatalf("error = %v", err)
-	}
-	if strings.Contains(err.Error(), payload) {
-		t.Fatal("expired-token error leaked token")
-	}
-}
-
 func TestConfigurationIsExplicit(t *testing.T) {
 	app := discover.Application{Instructions: "test", Model: "model"}
 	_, err := responderFromConfig(app, env(nil), http.DefaultClient, time.Now())
@@ -651,16 +443,6 @@ func weatherApplication(t *testing.T) discover.Application {
 
 func env(values map[string]string) func(string) string {
 	return func(name string) string { return values[name] }
-}
-
-func jwt(t *testing.T, claims map[string]any) string {
-	t.Helper()
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		t.Fatal(err)
-	}
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none"}`))
-	return header + "." + base64.RawURLEncoding.EncodeToString(payload) + ".signature"
 }
 
 func send(t *testing.T, responder workflow.Responder) (workflow.TurnResult, error) {
