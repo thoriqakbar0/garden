@@ -14,3 +14,12 @@ Behavioral fixtures ported into native Go tests:
 
 The Go tests assert the observable behavior rather than copying TypeScript
 implementation details.
+
+The shared client lives in `internal/contracttest/client.go`. Garden runs it in
+`internal/server/server_test.go`; the environment-gated official targets live
+in `internal/contracttest/official_test.go`:
+
+- `EVE_OFFICIAL_BASE_URL` targets the official conversation fixture.
+- `EVE_OFFICIAL_CANCELLATION_BASE_URL` targets the official cancellation fixture.
+
+A skipped official target is not differential evidence.

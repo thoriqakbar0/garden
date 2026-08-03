@@ -1,7 +1,7 @@
 .PHONY: build test check
 
 build:
-	go build -trimpath -o garden ./cmd/eve
+	CGO_ENABLED=0 go build -trimpath -o garden ./cmd/eve
 
 test:
 	go test ./...

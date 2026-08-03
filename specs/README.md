@@ -1,8 +1,8 @@
 # Garden specifications
 
-These documents define Garden as a local, self-hosted runner for Eve-shaped
-agent projects. They are the integration contract for the implementation work
-currently happening in separate Codex worktrees.
+These documents define Garden as a local, self-hosted runtime for Eve-shaped
+agent projects. They are the contract used to keep the Go implementation and
+its compatibility tests honest.
 
 Garden is not an Eve replacement and does not depend on Vercel runtime,
 deployment, Workflow SDK, storage, or hosted infrastructure. Official Eve is
@@ -10,18 +10,20 @@ the source for authored-project shape and observable wire behavior.
 
 ## Status
 
-The specifications describe the target, not the current `main` branch.
+The specifications contain both implemented requirements and the remaining
+hardening contract.
 
-| Area | Canonical `main` | Candidate task work | Required before integration |
-| --- | --- | --- | --- |
-| Project discovery | Static Eve-shaped discovery | Reused by all tasks | Define the supported authoring subset |
-| Agent execution | Deterministic echo | OpenAI-compatible model loop and native Go tool manifest | Integrate with the protocol event path |
-| HTTP sessions | Garden-specific JSON endpoints | Eve routes, protocol-v19 events, flushed NDJSON, resume, cancellation | Pass the same black-box client against Garden and pinned Eve |
-| Durability | JSONL replay and process-local cancellation | Tail repair and stronger lifecycle handling are in progress | Prove restart recovery and reject unsafe session IDs |
-| Vercel | Adapter, build command, and deployment docs remain | Agent-loop task removes them | Remove or isolate them outside the runner product |
+| Area | Canonical implementation | Remaining gap |
+| --- | --- | --- |
+| Project discovery | Static Eve-shaped discovery with an explicit native execution subset | Broader authored-module execution |
+| Agent execution | OpenAI-compatible and Codex model loop with native Go tools | Arbitrary TypeScript and additional tool executors |
+| HTTP sessions | Eve protocol-v19 create, continue, live NDJSON, resume, and cancellation | Live differential proof against every supported upstream fixture |
+| Durability | Fsync JSONL, safe IDs, tail repair, restart settlement, and single-writer ownership | Resume after a durable tool result instead of settling the interrupted turn |
+| Deployment | Single self-hosted Go binary with authenticated HTTP exposure | Distributed multi-writer storage and horizontal coordination |
 
-No candidate work is considered available until it is integrated into
-canonical `main` and the acceptance suite passes there.
+The shared Garden-side contract is required on every change. An
+environment-gated official Eve test that was skipped remains unverified and
+must not be reported as passing differential proof.
 
 ## Specifications
 
@@ -52,4 +54,3 @@ Compatibility work is pinned to the Eve revision recorded in
 3. recording intentional protocol changes in these specifications; and
 4. keeping old behavior only when Garden declares a versioned compatibility
    promise.
-
