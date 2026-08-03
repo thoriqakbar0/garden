@@ -1,0 +1,87 @@
+package main
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+func TestAuthenticatedHandlerRequiresTokenForPublicBind(t *testing.T) {
+	_, err := authenticatedHandler("0.0.0.0:3000", "", http.NotFoundHandler())
+	if err == nil || !strings.Contains(err.Error(), "GARDEN_AUTH_TOKEN") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestServeDefaultsToLoopback(t *testing.T) {
+	_, addr, err := commonFlags("serve", nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if addr != "127.0.0.1:3000" {
+		t.Fatalf("default address = %q", addr)
+	}
+}
+
+func TestAuthenticatedHandlerProtectsPublicBind(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	handler, err := authenticatedHandler("0.0.0.0:3000", "secret", next)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	unauthorized := httptest.NewRecorder()
+	handler.ServeHTTP(unauthorized, httptest.NewRequest(http.MethodGet, "/eve/v1/health", nil))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized status = %d", unauthorized.Code)
+	}
+
+	authorized := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/eve/v1/health", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	handler.ServeHTTP(authorized, request)
+	if authorized.Code != http.StatusNoContent {
+		t.Fatalf("authorized status = %d", authorized.Code)
+	}
+}
+
+func TestAuthenticatedHandlerLeavesLoopbackLocal(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	for _, addr := range []string{"127.0.0.1:3000", "[::1]:3000", "localhost:3000"} {
+		handler, err := authenticatedHandler(addr, "", next)
+		if err != nil {
+			t.Fatalf("%s: %v", addr, err)
+		}
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
+		if response.Code != http.StatusNoContent {
+			t.Fatalf("%s status = %d", addr, response.Code)
+		}
+	}
+}
+
+func TestConfiguredTokenAlsoProtectsLoopback(t *testing.T) {
+	handler, err := authenticatedHandler("127.0.0.1:3000", "secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unauthorized := httptest.NewRecorder()
+	handler.ServeHTTP(unauthorized, httptest.NewRequest(http.MethodGet, "/", nil))
+	if unauthorized.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized status = %d", unauthorized.Code)
+	}
+	authorized := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	handler.ServeHTTP(authorized, request)
+	if authorized.Code != http.StatusNoContent {
+		t.Fatalf("authorized status = %d", authorized.Code)
+	}
+}

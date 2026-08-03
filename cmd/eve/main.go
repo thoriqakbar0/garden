@@ -2,20 +2,24 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/thoriqakbar0/garden/internal/agent"
 	"github.com/thoriqakbar0/garden/internal/discover"
 	"github.com/thoriqakbar0/garden/internal/server"
-	"github.com/thoriqakbar0/garden/internal/vercel"
 	"github.com/thoriqakbar0/garden/internal/workflow"
 )
 
@@ -41,8 +45,6 @@ func run(args []string) error {
 		return runOnce(args[1:])
 	case "serve", "dev", "start":
 		return serve(args[1:])
-	case "build":
-		return build(args[1:])
 	case "eval":
 		return eval(args[1:])
 	case "version", "--version", "-v":
@@ -54,14 +56,13 @@ func run(args []string) error {
 }
 
 func usage() error {
-	fmt.Fprintln(os.Stderr, `garden: a single-binary eve runtime
+	fmt.Fprintln(os.Stderr, `garden: a self-hosted runtime for Eve agents
 
 Usage:
   eve init [directory]
   eve info [--root directory]
   eve run [--root directory] --message text [--session id]
-  eve serve [--root directory] [--addr :3000]
-  eve build [--root directory]
+  eve serve [--root directory] [--addr 127.0.0.1:3000]
   eve eval [--root directory] --list
   eve version`)
 	return errors.New("a command is required")
@@ -129,14 +130,15 @@ func runOnce(args []string) error {
 	if err != nil {
 		return err
 	}
-	responder, err := agent.ResponderFromEnvironment(app)
+	runner, err := agent.RunnerFromEnvironment(app)
 	if err != nil {
 		return err
 	}
-	store, err := workflow.Open(filepath.Join(*root, ".eve", "workflow-data"), responder)
+	store, err := workflow.OpenRunner(filepath.Join(*root, ".eve", "workflow-data"), runner)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = store.Close() }()
 	id := *sessionID
 	if id == "" {
 		id, err = store.CreateSession()
@@ -151,7 +153,7 @@ func runOnce(args []string) error {
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
-func serve(args []string) error {
+func serve(args []string) (returnErr error) {
 	root, addr, err := commonFlags("serve", args, true)
 	if err != nil {
 		return err
@@ -160,33 +162,45 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
-	responder, err := agent.ResponderFromEnvironment(app)
+	runner, err := agent.RunnerFromEnvironment(app)
 	if err != nil {
 		return err
 	}
-	store, err := workflow.Open(filepath.Join(root, ".eve", "workflow-data"), responder)
+	store, err := workflow.OpenRunner(filepath.Join(root, ".eve", "workflow-data"), runner)
 	if err != nil {
 		return err
 	}
-	log.Printf("eve listening on %s", addr)
-	return http.ListenAndServe(addr, server.Handler(app, store))
-}
-
-func build(args []string) error {
-	root, _, err := commonFlags("build", args, false)
+	defer func() { returnErr = errors.Join(returnErr, store.Close()) }()
+	handler, err := authenticatedHandler(addr, os.Getenv("GARDEN_AUTH_TOKEN"), server.Handler(app, store))
 	if err != nil {
 		return err
 	}
-	app, err := discover.ApplicationAt(root)
-	if err != nil {
-		return err
+	log.Printf("garden listening on %s", addr)
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
-	path, err := vercel.WriteConfig(root, app)
-	if err != nil {
-		return err
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(stop)
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-stop:
+			_ = httpServer.Close()
+		case <-done:
+		}
+	}()
+	err = httpServer.ListenAndServe()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
 	}
-	fmt.Println(path)
-	return nil
+	return err
 }
 
 func eval(args []string) error {
@@ -210,7 +224,7 @@ func eval(args []string) error {
 func commonFlags(name string, args []string, withAddr bool) (string, string, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	root := flags.String("root", ".", "project root")
-	addr := flags.String("addr", ":3000", "listen address")
+	addr := flags.String("addr", "127.0.0.1:3000", "listen address")
 	if !withAddr {
 		flags.SetOutput(os.Stderr)
 	}
@@ -218,4 +232,40 @@ func commonFlags(name string, args []string, withAddr bool) (string, string, err
 		return "", "", err
 	}
 	return *root, *addr, nil
+}
+
+func authenticatedHandler(addr, configuredToken string, next http.Handler) (http.Handler, error) {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid listen address %q: %w", addr, err)
+	}
+	token := strings.TrimSpace(configuredToken)
+	if token == "" {
+		if loopbackHost(host) {
+			return next, nil
+		}
+		return nil, errors.New("non-loopback serving requires GARDEN_AUTH_TOKEN")
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		const prefix = "Bearer "
+		authorization := r.Header.Get("Authorization")
+		provided := ""
+		if strings.HasPrefix(authorization, prefix) {
+			provided = strings.TrimPrefix(authorization, prefix)
+		}
+		if len(provided) != len(token) || subtle.ConstantTimeCompare([]byte(provided), []byte(token)) != 1 {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	}), nil
+}
+
+func loopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

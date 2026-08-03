@@ -1,4 +1,4 @@
-// Package server exposes the durable runtime through an HTTP API.
+// Package server exposes Garden's local runtime through Eve's HTTP protocol.
 package server
 
 import (
@@ -7,25 +7,31 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/thoriqakbar0/garden/internal/discover"
+	"github.com/thoriqakbar0/garden/internal/protocol"
 	"github.com/thoriqakbar0/garden/internal/workflow"
 )
 
-// Handler constructs the eve-compatible HTTP surface.
+var decimalInteger = regexp.MustCompile(`^-?\d+$`)
+
+const maxRequestBodyBytes = 1 << 20
+
+// Handler constructs the Eve-compatible local HTTP surface.
 func Handler(app discover.Application, store *workflow.Store) http.Handler {
 	server := &api{app: app, store: store}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.health)
+	mux.HandleFunc("GET /eve/v1/health", server.health)
 	mux.HandleFunc("GET /eve/v1/info", server.info)
 	mux.HandleFunc("POST /eve/v1/session", server.createSession)
-	mux.HandleFunc("POST /eve/v1/session/{sessionID}/turn", server.send)
+	mux.HandleFunc("POST /eve/v1/session/{sessionID}", server.continueSession)
 	mux.HandleFunc("GET /eve/v1/session/{sessionID}/stream", server.stream)
 	mux.HandleFunc("POST /eve/v1/session/{sessionID}/cancel", server.cancel)
 	mux.HandleFunc("POST /eve/v1/schedules/{scheduleID}/dispatch", server.dispatchSchedule)
-	mux.HandleFunc("GET /eve/v1/schedules/{scheduleID}/dispatch", server.dispatchSchedule)
 	return mux
 }
 
@@ -39,68 +45,253 @@ func (a *api) health(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *api) info(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, a.app)
+	w.Header().Set("Cache-Control", "no-store")
+	schedules := make([]publicSchedule, len(a.app.Schedules))
+	for index, schedule := range a.app.Schedules {
+		schedules[index] = publicSchedule{ID: schedule.ID, Cron: schedule.Cron}
+	}
+	writeJSON(w, http.StatusOK, publicApplication{
+		Model:       a.app.Model,
+		Tools:       a.app.Tools,
+		Skills:      a.app.Skills,
+		Channels:    a.app.Channels,
+		Connections: a.app.Connections,
+		Subagents:   a.app.Subagents,
+		Schedules:   schedules,
+		Evals:       a.app.Evals,
+	})
 }
 
-func (a *api) createSession(w http.ResponseWriter, _ *http.Request) {
-	id, err := a.store.CreateSession()
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]string{"sessionId": id})
+type publicApplication struct {
+	Model       string           `json:"model,omitempty"`
+	Tools       []string         `json:"tools"`
+	Skills      []string         `json:"skills"`
+	Channels    []string         `json:"channels"`
+	Connections []string         `json:"connections"`
+	Subagents   []string         `json:"subagents"`
+	Schedules   []publicSchedule `json:"schedules"`
+	Evals       []string         `json:"evals"`
 }
 
-func (a *api) send(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Message string `json:"message"`
-	}
+type publicSchedule struct {
+	ID   string `json:"id"`
+	Cron string `json:"cron,omitempty"`
+}
+
+func (a *api) createSession(w http.ResponseWriter, r *http.Request) {
+	var input protocol.CreateSessionRequest
 	if err := decodeJSON(r, &input); err != nil {
-		writeClientError(w, err)
+		writeProtocolError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	result, err := a.store.Send(r.Context(), r.PathValue("sessionID"), input.Message)
+	if strings.TrimSpace(input.Message) == "" {
+		writeProtocolError(w, http.StatusBadRequest, "Missing or empty 'message' field.")
+		return
+	}
+
+	result, err := a.store.StartSession(input.Message)
 	if err != nil {
-		if errors.Is(err, r.Context().Err()) {
-			writeJSON(w, 499, map[string]string{"error": "request cancelled"})
-			return
-		}
-		writeError(w, err)
+		writeServerError(w)
 		return
 	}
-	writeJSON(w, http.StatusOK, result)
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(protocol.SessionIDHeader, result.SessionID)
+	writeJSON(w, http.StatusAccepted, protocol.SessionResponse{
+		ContinuationToken: result.ContinuationToken,
+		OK:                true,
+		SessionID:         result.SessionID,
+	})
+}
+
+func (a *api) continueSession(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("sessionID")
+	var input protocol.ContinueSessionRequest
+	if err := decodeJSON(r, &input); err != nil {
+		writeProtocolError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if input.ContinuationToken == "" {
+		writeProtocolError(w, http.StatusBadRequest, "Missing or empty 'continuationToken' field.")
+		return
+	}
+	if strings.TrimSpace(input.Message) == "" {
+		writeProtocolError(
+			w,
+			http.StatusBadRequest,
+			"Expected a non-empty 'message', a non-empty 'inputResponses' array, or both.",
+		)
+		return
+	}
+	result, err := a.store.Continue(
+		sessionID,
+		input.ContinuationToken,
+		input.Message,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, workflow.ErrInvalidContinuation):
+			writeProtocolError(w, http.StatusBadRequest, "Invalid 'continuationToken' field.")
+		case errors.Is(err, workflow.ErrInvalidSessionID):
+			writeProtocolError(w, http.StatusBadRequest, "Invalid session ID.")
+		case errors.Is(err, workflow.ErrSessionBusy):
+			writeProtocolError(w, http.StatusConflict, "Session already has an active turn.")
+		default:
+			writeServerError(w)
+		}
+		return
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(protocol.SessionIDHeader, result.SessionID)
+	writeJSON(w, http.StatusOK, protocol.SessionResponse{OK: true, SessionID: result.SessionID})
 }
 
 func (a *api) stream(w http.ResponseWriter, r *http.Request) {
-	startIndex := 0
-	if raw := r.URL.Query().Get("startIndex"); raw != "" {
-		value, err := strconv.Atoi(raw)
-		if err != nil || value < 0 {
-			writeClientError(w, errors.New("startIndex must be a non-negative integer"))
-			return
-		}
-		startIndex = value
-	}
-	events, err := a.store.Replay(r.PathValue("sessionID"), startIndex)
+	sessionID := r.PathValue("sessionID")
+	startIndex, err := parseStartIndex(r)
 	if err != nil {
-		writeError(w, err)
+		writeProtocolError(w, http.StatusBadRequest, "Expected startIndex to be an integer.")
 		return
 	}
-	writeJSON(w, http.StatusOK, events)
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeProtocolError(w, http.StatusInternalServerError, "Streaming is unavailable.")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store, no-transform")
+	w.Header().Set("Content-Type", protocol.MessageStreamContentType)
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.Header().Set(protocol.SessionIDHeader, sessionID)
+	w.Header().Set(protocol.StreamFormatHeader, protocol.MessageStreamFormat)
+	w.Header().Set(protocol.StreamVersionHeader, protocol.MessageStreamVersion)
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.WriteString(w, "\n")
+	flusher.Flush()
+
+	events, replayErr := a.store.Replay(sessionID, 0)
+	if replayErr != nil {
+		return
+	}
+	public := make([]protocol.Event, 0, len(events))
+	for _, event := range events {
+		projected, visible, err := publicEvent(event)
+		if err != nil {
+			return
+		}
+		if visible {
+			public = append(public, projected)
+		}
+	}
+	cursor := startIndex
+	if cursor < 0 {
+		cursor = len(public) + cursor
+		if cursor < 0 {
+			cursor = 0
+		}
+	}
+
+	encoder := json.NewEncoder(w)
+	publicIndex := 0
+	for _, event := range public {
+		if publicIndex >= cursor {
+			if err := encoder.Encode(event); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+		publicIndex++
+	}
+	internalCursor := len(events)
+	for {
+		events, waitErr := a.store.WaitForEvents(r.Context(), sessionID, internalCursor)
+		if waitErr != nil {
+			return
+		}
+		for _, event := range events {
+			internalCursor = event.Index + 1
+			projected, visible, err := publicEvent(event)
+			if err != nil {
+				return
+			}
+			if visible {
+				if publicIndex >= cursor {
+					if err := encoder.Encode(projected); err != nil {
+						return
+					}
+					flusher.Flush()
+				}
+				publicIndex++
+			}
+		}
+	}
+}
+
+func publicEvent(event workflow.Event) (protocol.Event, bool, error) {
+	projected := protocol.Event{
+		Data: append(json.RawMessage(nil), event.Data...),
+		Meta: protocol.EventMeta{At: event.Meta.At},
+		Type: protocol.EventType(event.Type),
+	}
+	switch projected.Type {
+	case protocol.SessionStarted:
+		projected.Data = json.RawMessage(`{}`)
+	case protocol.TurnStarted:
+		var data protocol.TurnData
+		if err := json.Unmarshal(event.Data, &data); err != nil {
+			return protocol.Event{}, false, err
+		}
+		encoded, err := json.Marshal(data)
+		if err != nil {
+			return protocol.Event{}, false, err
+		}
+		projected.Data = encoded
+	case protocol.MessageReceived:
+		var data protocol.MessageReceivedData
+		if err := json.Unmarshal(event.Data, &data); err != nil {
+			return protocol.Event{}, false, err
+		}
+		data.Parts = []protocol.TextPart{{Text: data.Message, Type: "text"}}
+		encoded, err := json.Marshal(data)
+		if err != nil {
+			return protocol.Event{}, false, err
+		}
+		projected.Data = encoded
+	case protocol.StepStarted,
+		protocol.MessageAppended,
+		protocol.MessageCompleted,
+		protocol.StepCompleted,
+		protocol.TurnCompleted,
+		protocol.TurnCancelled,
+		protocol.TurnFailed,
+		protocol.SessionWaiting:
+		// These event types already use the pinned Eve envelope and payload.
+	default:
+		return protocol.Event{}, false, nil
+	}
+	return projected, true, nil
 }
 
 func (a *api) cancel(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		TurnID string `json:"turnId"`
+	input, err := parseCancelTurn(r)
+	if err != nil {
+		writeProtocolError(w, http.StatusBadRequest, err.Error())
+		return
 	}
-	if r.ContentLength != 0 {
-		if err := decodeJSON(r, &input); err != nil {
-			writeClientError(w, err)
-			return
-		}
+	sessionID := r.PathValue("sessionID")
+	result, err := a.store.Cancel(r.Context(), sessionID, input.TurnID)
+	if err != nil {
+		writeServerError(w)
+		return
 	}
-	result := a.store.Cancel(r.PathValue("sessionID"), input.TurnID)
-	writeJSON(w, http.StatusOK, map[string]workflow.CancelResult{"status": result})
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set(protocol.SessionIDHeader, sessionID)
+	writeJSON(w, http.StatusAccepted, protocol.CancelTurnResponse{
+		OK:        true,
+		SessionID: sessionID,
+		Status:    string(result),
+	})
 }
 
 func (a *api) dispatchSchedule(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +309,7 @@ func (a *api) dispatchSchedule(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionID, err := a.store.CreateSession()
 	if err != nil {
-		writeError(w, err)
+		writeServerError(w)
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{
@@ -127,14 +318,62 @@ func (a *api) dispatchSchedule(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func parseStartIndex(r *http.Request) (int, error) {
+	values, present := r.URL.Query()["startIndex"]
+	if !present {
+		return 0, nil
+	}
+	if len(values) != 1 || !decimalInteger.MatchString(values[0]) {
+		return 0, errors.New("startIndex is not a decimal integer")
+	}
+	value, err := strconv.ParseInt(values[0], 10, 64)
+	if err != nil || int64(int(value)) != value {
+		return 0, errors.New("startIndex is outside the supported integer range")
+	}
+	return int(value), nil
+}
+
+func parseCancelTurn(r *http.Request) (protocol.CancelTurnRequest, error) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes+1))
+	if err != nil {
+		return protocol.CancelTurnRequest{}, errors.New("Unreadable request body.")
+	}
+	if len(body) > maxRequestBodyBytes {
+		return protocol.CancelTurnRequest{}, errors.New("Request body is too large.")
+	}
+	if strings.TrimSpace(string(body)) == "" {
+		return protocol.CancelTurnRequest{}, nil
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(body, &object); err != nil || object == nil {
+		return protocol.CancelTurnRequest{}, errors.New("Expected a JSON object.")
+	}
+	raw, present := object["turnId"]
+	if !present {
+		return protocol.CancelTurnRequest{}, nil
+	}
+	var turnID string
+	if err := json.Unmarshal(raw, &turnID); err != nil || turnID == "" {
+		return protocol.CancelTurnRequest{}, errors.New("Expected 'turnId' to be a non-empty string.")
+	}
+	return protocol.CancelTurnRequest{TurnID: turnID}, nil
+}
+
 func decodeJSON(r *http.Request, target any) error {
-	decoder := json.NewDecoder(io.LimitReader(r.Body, (1<<20)+1))
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes+1))
+	if err != nil {
+		return errors.New("Invalid JSON body.")
+	}
+	if len(body) > maxRequestBodyBytes {
+		return errors.New("Request body is too large.")
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(body)))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
-		return fmt.Errorf("invalid JSON body: %w", err)
+		return errors.New("Invalid JSON body.")
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		return errors.New("invalid JSON body: expected exactly one value")
+		return errors.New("Invalid JSON body.")
 	}
 	return nil
 }
@@ -145,14 +384,10 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 
-func writeClientError(w http.ResponseWriter, err error) {
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+func writeProtocolError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, protocol.ErrorResponse{Error: message, OK: false})
 }
 
-func writeError(w http.ResponseWriter, err error) {
-	status := http.StatusInternalServerError
-	if strings.Contains(err.Error(), "does not exist") || errors.Is(err, errors.ErrUnsupported) {
-		status = http.StatusNotFound
-	}
-	writeJSON(w, status, map[string]string{"error": err.Error()})
+func writeServerError(w http.ResponseWriter) {
+	writeProtocolError(w, http.StatusInternalServerError, "Local runtime request failed.")
 }

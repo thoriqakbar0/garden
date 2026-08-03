@@ -22,12 +22,30 @@ const (
 	defaultCodexModel = "gpt-5.6-sol"
 )
 
-// ResponderFromEnvironment configures the same runner used by CLI and HTTP modes.
+// RunnerFromEnvironment configures the workflow runner used by CLI and HTTP modes.
+func RunnerFromEnvironment(app discover.Application) (workflow.Runner, error) {
+	return runnerFromConfig(app, os.Getenv, http.DefaultClient, time.Now())
+}
+
+// ResponderFromEnvironment preserves the one-shot responder seam for tests and
+// older embedders. Runtime entrypoints should use RunnerFromEnvironment.
 func ResponderFromEnvironment(app discover.Application) (workflow.Responder, error) {
-	return responderFromConfig(app, os.Getenv, http.DefaultClient, time.Now())
+	runner, err := runnerFromConfig(app, os.Getenv, http.DefaultClient, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	return runner.Respond, nil
 }
 
 func responderFromConfig(app discover.Application, getenv func(string) string, client *http.Client, now time.Time) (workflow.Responder, error) {
+	runner, err := runnerFromConfig(app, getenv, client, now)
+	if err != nil {
+		return nil, err
+	}
+	return runner.Respond, nil
+}
+
+func runnerFromConfig(app discover.Application, getenv func(string) string, client *http.Client, now time.Time) (*Runner, error) {
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -69,7 +87,7 @@ func responderFromConfig(app discover.Application, getenv func(string) string, c
 	default:
 		return nil, errors.New("GARDEN_MODEL_BACKEND must be set to openai or codex")
 	}
-	return NewResponder(app, backend, modelName, NativeManifest())
+	return NewRunner(app, backend, modelName, NativeManifest())
 }
 
 func codexFromEnvironment(getenv func(string) string, client *http.Client, now time.Time) (model, string, error) {
