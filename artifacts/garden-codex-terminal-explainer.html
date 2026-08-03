@@ -1,0 +1,1311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>How Garden runs Eve agents 1:1</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #07100d;
+      --page-2: #0b1712;
+      --surface: rgba(19, 35, 28, 0.72);
+      --surface-strong: rgba(24, 43, 35, 0.94);
+      --surface-soft: rgba(255, 255, 255, 0.045);
+      --line: rgba(217, 243, 229, 0.13);
+      --line-strong: rgba(217, 243, 229, 0.24);
+      --text: #f2f8f4;
+      --text-2: #bbccc2;
+      --text-3: #82978b;
+      --green: #74e39e;
+      --green-strong: #2bc66b;
+      --green-soft: rgba(116, 227, 158, 0.13);
+      --blue: #79b8ff;
+      --blue-soft: rgba(121, 184, 255, 0.13);
+      --amber: #f3c969;
+      --amber-soft: rgba(243, 201, 105, 0.13);
+      --red: #ff8f86;
+      --red-soft: rgba(255, 143, 134, 0.12);
+      --shadow-lg: 0 32px 80px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+      --shadow-sm: 0 12px 30px rgba(0, 0, 0, 0.18);
+      --radius-xl: 1.75rem;
+      --radius-lg: 1.25rem;
+      --radius-md: 0.9rem;
+      --display: clamp(2.45rem, 7vw, 5.8rem);
+      --title: clamp(1.65rem, 3.5vw, 2.65rem);
+      --heading: 1.1rem;
+      --body: 1rem;
+      --caption: 0.8125rem;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      min-width: 20rem;
+      background: var(--page);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 5%, rgba(43, 198, 107, 0.16), transparent 27rem),
+        radial-gradient(circle at 90% 32%, rgba(121, 184, 255, 0.1), transparent 24rem),
+        linear-gradient(180deg, var(--page-2), var(--page) 35rem);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      font-size: var(--body);
+      line-height: 1.55;
+      font-synthesis: none;
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      content: "";
+      pointer-events: none;
+      opacity: 0.28;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, black, transparent 74%);
+    }
+
+    button, textarea { font: inherit; }
+
+    button {
+      color: inherit;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    button:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(121, 184, 255, 0.86);
+      outline-offset: 3px;
+    }
+
+    ::selection {
+      color: #07100d;
+      background: var(--green);
+    }
+
+    .shell {
+      width: min(76rem, calc(100% - 2rem));
+      margin-inline: auto;
+      padding: 1.2rem 0 4rem;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0.75rem;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 3.4rem;
+      padding: 0.55rem 0.7rem 0.55rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1.15rem;
+      background: rgba(9, 20, 15, 0.72);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(20px) saturate(150%);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      min-width: 0;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 1.8rem;
+      height: 1.8rem;
+      flex: 0 0 auto;
+      border-radius: 0.6rem 0.6rem 0.85rem 0.6rem;
+      background: linear-gradient(145deg, #9bf0b7, #2bc66b);
+      box-shadow: 0 6px 18px rgba(43, 198, 107, 0.25);
+      transform: rotate(-7deg);
+    }
+
+    .brand-mark::after {
+      position: absolute;
+      top: 0.24rem;
+      right: 0.26rem;
+      width: 0.55rem;
+      height: 0.28rem;
+      border-radius: 100% 0;
+      background: #0b1712;
+      content: "";
+      transform: rotate(20deg);
+    }
+
+    .top-note {
+      color: var(--text-2);
+      font-size: var(--caption);
+      white-space: nowrap;
+    }
+
+    .status-chip,
+    .eyebrow,
+    .mini-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      width: fit-content;
+      border: 1px solid rgba(116, 227, 158, 0.22);
+      border-radius: 999px;
+      color: #bdf5d0;
+      background: var(--green-soft);
+      font-size: var(--caption);
+      font-weight: 650;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .status-chip { padding: 0.65rem 0.8rem; }
+    .eyebrow { padding: 0.5rem 0.7rem; text-transform: uppercase; letter-spacing: 0.055em; }
+    .mini-chip { padding: 0.4rem 0.55rem; }
+
+    .status-dot {
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(116, 227, 158, 0.1);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.8fr);
+      align-items: end;
+      gap: 3rem;
+      padding: clamp(4.8rem, 10vw, 8.4rem) 0 3.3rem;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 11.5ch;
+      margin-bottom: 1.45rem;
+      font-size: var(--display);
+      font-weight: 680;
+      letter-spacing: -0.055em;
+      line-height: 0.96;
+      text-wrap: balance;
+    }
+
+    .hero-copy {
+      max-width: 67ch;
+      margin-bottom: 0;
+      color: var(--text-2);
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      line-height: 1.55;
+      text-wrap: pretty;
+    }
+
+    .takeaway {
+      position: relative;
+      overflow: hidden;
+      padding: 1.25rem;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(145deg, rgba(116, 227, 158, 0.11), rgba(255,255,255,0.035));
+      box-shadow: var(--shadow-sm);
+    }
+
+    .takeaway::before {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      content: "";
+      background: linear-gradient(var(--green), transparent);
+    }
+
+    .takeaway-label,
+    .section-kicker,
+    .card-label {
+      margin-bottom: 0.55rem;
+      color: var(--text-3);
+      font-size: var(--caption);
+      font-weight: 700;
+      letter-spacing: 0.055em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .takeaway p:last-child {
+      margin-bottom: 0;
+      font-weight: 560;
+      line-height: 1.5;
+      text-wrap: pretty;
+    }
+
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      margin-bottom: 4.5rem;
+    }
+
+    .evidence-card {
+      min-height: 10.5rem;
+      padding: 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+    }
+
+    .evidence-icon {
+      display: grid;
+      width: 2.35rem;
+      height: 2.35rem;
+      margin-bottom: 1.4rem;
+      place-items: center;
+      border-radius: 0.75rem;
+      color: var(--green);
+      background: var(--green-soft);
+      font-weight: 760;
+    }
+
+    .evidence-card:nth-child(2) .evidence-icon { color: var(--blue); background: var(--blue-soft); }
+    .evidence-card:nth-child(3) .evidence-icon { color: var(--amber); background: var(--amber-soft); }
+
+    .evidence-card h2 {
+      margin-bottom: 0.45rem;
+      font-size: var(--heading);
+      line-height: 1.25;
+      letter-spacing: -0.015em;
+    }
+
+    .evidence-card p {
+      max-width: 34ch;
+      margin-bottom: 0;
+      color: var(--text-2);
+      font-size: 0.925rem;
+      line-height: 1.5;
+      text-wrap: pretty;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-heading h2 {
+      max-width: 15ch;
+      margin-bottom: 0;
+      font-size: var(--title);
+      line-height: 1.06;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .section-heading p {
+      max-width: 44ch;
+      margin-bottom: 0.1rem;
+      color: var(--text-2);
+      text-align: end;
+      text-wrap: pretty;
+    }
+
+    .simulator {
+      overflow: hidden;
+      margin-bottom: 4.5rem;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(28px) saturate(135%);
+    }
+
+    .sim-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 1rem;
+      padding: 1.15rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-2);
+      font-size: var(--caption);
+      font-weight: 650;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 3.2rem;
+      max-height: 8rem;
+      resize: vertical;
+      padding: 0.82rem 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.18);
+      caret-color: var(--green);
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    textarea::placeholder { color: var(--text-3); }
+
+    .control-cluster {
+      display: flex;
+      align-items: end;
+      gap: 0.65rem;
+    }
+
+    .segment-wrap label { margin-inline-start: 0.1rem; }
+
+    .segment {
+      display: flex;
+      padding: 0.24rem;
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .segment button {
+      min-height: 2.65rem;
+      padding: 0 0.75rem;
+      border: 0;
+      border-radius: 0.6rem;
+      color: var(--text-3);
+      background: transparent;
+      font-size: 0.875rem;
+      font-weight: 650;
+      cursor: pointer;
+      transition: color 150ms ease, background 150ms ease, transform 90ms ease;
+    }
+
+    .segment button[aria-checked="true"] {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+    }
+
+    .segment button:active,
+    .primary-button:active { transform: scale(0.97); }
+
+    .primary-button {
+      position: relative;
+      min-height: 3.1rem;
+      padding: 0 1.15rem;
+      overflow: hidden;
+      border: 1px solid rgba(183, 247, 205, 0.52);
+      border-radius: 0.85rem;
+      color: #06100b;
+      background: linear-gradient(180deg, #9bf0b7, #63db8c);
+      box-shadow: 0 10px 24px rgba(43, 198, 107, 0.18), 0 1px 0 white inset;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform 90ms ease, filter 150ms ease;
+    }
+
+    .primary-button:hover { filter: brightness(1.04); }
+
+    .primary-button::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+      opacity: 0;
+      background: white;
+      transition: opacity 100ms ease;
+    }
+
+    .primary-button:active::after { opacity: 0.12; }
+
+    .stage {
+      position: relative;
+      min-height: 24rem;
+      padding: 2.15rem 1.3rem 1.5rem;
+      background:
+        radial-gradient(circle at 80% 20%, rgba(121, 184, 255, 0.06), transparent 17rem),
+        linear-gradient(rgba(255,255,255,0.012), rgba(255,255,255,0));
+    }
+
+    .flow {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.2rem;
+      max-width: 68rem;
+      margin: 0 auto;
+    }
+
+    .flow-line {
+      position: absolute;
+      top: 3rem;
+      right: 8%;
+      left: 8%;
+      height: 2px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .flow-line::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      background: linear-gradient(90deg, var(--green), var(--blue), var(--amber));
+      transform: scaleX(var(--flow-progress, 0));
+      transform-origin: left;
+      transition: transform 480ms cubic-bezier(.22,.8,.25,1);
+    }
+
+    .node {
+      position: relative;
+      z-index: 2;
+      min-width: 0;
+      text-align: center;
+    }
+
+    .node-orb {
+      display: grid;
+      width: 6rem;
+      height: 6rem;
+      margin: 0 auto 1rem;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 1.5rem;
+      color: var(--text-2);
+      background: rgba(8, 18, 13, 0.92);
+      box-shadow: 0 14px 35px rgba(0,0,0,0.24);
+      transition: color 240ms ease, border-color 240ms ease, background 240ms ease, transform 380ms cubic-bezier(.22,.8,.25,1), box-shadow 240ms ease;
+    }
+
+    .node.is-active .node-orb {
+      color: var(--green);
+      border-color: rgba(116, 227, 158, 0.48);
+      background: rgba(27, 57, 41, 0.96);
+      box-shadow: 0 14px 40px rgba(43,198,107,0.16), 0 0 0 5px rgba(116,227,158,0.06);
+      transform: translateY(-0.3rem);
+    }
+
+    .node.is-complete .node-orb {
+      color: var(--green);
+      border-color: rgba(116, 227, 158, 0.3);
+    }
+
+    .node-glyph {
+      font-size: 1.55rem;
+      font-weight: 760;
+      letter-spacing: -0.06em;
+    }
+
+    .node h3 {
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+    }
+
+    .node p {
+      max-width: 17ch;
+      margin: 0 auto;
+      color: var(--text-3);
+      font-size: var(--caption);
+      line-height: 1.45;
+      text-wrap: pretty;
+    }
+
+    .packet {
+      position: absolute;
+      top: 3rem;
+      left: 8%;
+      z-index: 4;
+      display: grid;
+      width: 0.85rem;
+      height: 0.85rem;
+      place-items: center;
+      border: 2px solid #d6ffe3;
+      border-radius: 50%;
+      opacity: 0;
+      background: var(--green-strong);
+      box-shadow: 0 0 0 6px rgba(116,227,158,0.1), 0 0 24px var(--green);
+      transform: translate(-50%, -50%);
+      transition: left 480ms cubic-bezier(.22,.8,.25,1), opacity 140ms ease;
+    }
+
+    .packet.is-visible { opacity: 1; }
+
+    .stage-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      min-height: 2rem;
+      margin: 2.15rem auto 0;
+      color: var(--text-2);
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+
+    .stage-status .pulse {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--text-3);
+      transition: background 200ms ease, box-shadow 200ms ease;
+    }
+
+    .stage-status.is-running .pulse {
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(116,227,158,0.1);
+    }
+
+    .event-drawer {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      border-top: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.14);
+    }
+
+    .event-list,
+    .record-card { padding: 1.25rem; }
+
+    .event-list { border-right: 1px solid var(--line); }
+
+    .event-row {
+      display: grid;
+      grid-template-columns: 2.2rem 0.75rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0.7rem;
+      min-height: 2.75rem;
+      padding: 0.35rem 0.45rem;
+      border-radius: 0.65rem;
+      color: var(--text-3);
+      font-size: 0.875rem;
+      transition: color 180ms ease, background 180ms ease, transform 260ms cubic-bezier(.22,.8,.25,1);
+    }
+
+    .event-row.is-active {
+      color: var(--text);
+      background: rgba(255,255,255,0.055);
+      transform: translateX(0.2rem);
+    }
+
+    .event-row.is-complete { color: var(--text-2); }
+
+    .event-index {
+      color: var(--text-3);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .event-mark {
+      width: 0.55rem;
+      height: 0.55rem;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .event-row.is-active .event-mark {
+      border-color: var(--green);
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(116,227,158,0.08);
+    }
+
+    .event-row.is-complete .event-mark { border-color: var(--green); background: rgba(116,227,158,0.44); }
+
+    .event-name {
+      overflow-wrap: break-word;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.8rem;
+    }
+
+    .event-value {
+      color: inherit;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .record-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
+    .record-box {
+      min-width: 0;
+      padding: 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .record-box h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.55rem;
+      font-size: 0.85rem;
+      letter-spacing: -0.01em;
+    }
+
+    .record-box ul {
+      display: grid;
+      gap: 0.36rem;
+      margin: 0;
+      padding: 0;
+      color: var(--text-2);
+      font-size: 0.8rem;
+      line-height: 1.4;
+      list-style: none;
+    }
+
+    .record-box li { overflow-wrap: break-word; }
+
+    .record-box li::before {
+      display: inline-block;
+      width: 1.1rem;
+      color: var(--green);
+      content: "✓";
+    }
+
+    .record-box.omitted li::before { color: var(--red); content: "—"; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 4.5rem;
+    }
+
+    .detail-card {
+      padding: 1.35rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+    }
+
+    .detail-card h2 {
+      margin-bottom: 0.55rem;
+      font-size: 1.25rem;
+      line-height: 1.25;
+      letter-spacing: -0.022em;
+    }
+
+    .detail-card > p {
+      max-width: 58ch;
+      margin-bottom: 1.1rem;
+      color: var(--text-2);
+      text-wrap: pretty;
+    }
+
+    .policy-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .policy-table th,
+    .policy-table td {
+      padding: 0.72rem 0;
+      border-top: 1px solid var(--line);
+      text-align: start;
+      vertical-align: top;
+    }
+
+    .policy-table th {
+      width: 8.5rem;
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .policy-table td { color: var(--text-2); }
+
+    .policy-table code,
+    .config-line code {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.82em;
+    }
+
+    .config-stack {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 1.25rem;
+    }
+
+    .config-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 2.8rem;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      color: var(--text-2);
+      background: rgba(0,0,0,0.15);
+      font-size: 0.8rem;
+    }
+
+    .config-line strong {
+      color: var(--text);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 2rem;
+      padding: clamp(1.35rem, 4vw, 2rem);
+      border: 1px solid rgba(116,227,158,0.25);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(125deg, rgba(116,227,158,0.11), rgba(121,184,255,0.06));
+    }
+
+    .decision h2 {
+      margin-bottom: 0.35rem;
+      font-size: var(--title);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    .decision p {
+      max-width: 62ch;
+      margin-bottom: 0;
+      color: var(--text-2);
+      text-wrap: pretty;
+    }
+
+    .decision-code {
+      display: grid;
+      gap: 0.35rem;
+      min-width: 16rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 0.9rem;
+      background: rgba(0,0,0,0.22);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .decision-code .key { color: var(--blue); }
+    .decision-code .value { color: var(--green); }
+
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 2.2rem 0 0;
+      color: var(--text-3);
+      font-size: var(--caption);
+    }
+
+    footer p { margin: 0; }
+
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; gap: 2rem; align-items: start; }
+      .takeaway { max-width: 38rem; }
+      .evidence-grid { grid-template-columns: 1fr; }
+      .evidence-card { min-height: 0; }
+      .sim-controls { grid-template-columns: 1fr; }
+      .control-cluster { justify-content: space-between; }
+      .event-drawer, .detail-grid { grid-template-columns: 1fr; }
+      .event-list { border-right: 0; border-bottom: 1px solid var(--line); }
+      .decision { grid-template-columns: 1fr; }
+      .decision-code { min-width: 0; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 1rem, 76rem); }
+      .topbar { top: 0.35rem; }
+      .top-note { display: none; }
+      .hero { padding-top: 4rem; }
+      h1 { font-size: clamp(2.65rem, 14vw, 4.1rem); }
+      .section-heading { display: block; }
+      .section-heading h2 { margin-bottom: 0.8rem; }
+      .section-heading p { text-align: start; }
+      .control-cluster { display: grid; grid-template-columns: 1fr; }
+      .segment { width: 100%; }
+      .segment button { flex: 1; }
+      .primary-button { width: 100%; }
+      .stage { min-height: 37rem; padding-inline: 1rem; }
+      .flow { grid-template-columns: 1fr; gap: 1.25rem; }
+      .flow-line { top: 2.5rem; bottom: 2.5rem; left: 50%; width: 2px; height: auto; }
+      .flow-line::after { transform: scaleY(var(--flow-progress, 0)); transform-origin: top; }
+      .node { display: grid; grid-template-columns: 5rem minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 1rem; text-align: start; }
+      .node-orb { grid-row: 1 / 3; width: 5rem; height: 5rem; margin: 0; }
+      .node h3 { align-self: end; margin-bottom: 0.15rem; }
+      .node p { align-self: start; max-width: 28ch; margin: 0; }
+      .packet { top: 2.5rem; left: 50%; transition: top 480ms cubic-bezier(.22,.8,.25,1), opacity 140ms ease; }
+      .stage-status { margin-top: 1.5rem; }
+      .event-row { grid-template-columns: 1.65rem 0.6rem minmax(0, 1fr); }
+      .event-value { grid-column: 3; }
+      .record-grid { grid-template-columns: 1fr; }
+      .config-line { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+      footer { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.001ms !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .topbar, .simulator { background: var(--surface-strong); backdrop-filter: none; }
+    }
+
+    @media (prefers-contrast: more) {
+      :root { --line: rgba(255,255,255,0.35); --line-strong: rgba(255,255,255,0.58); --text-2: #dce7e0; --text-3: #b3c2b8; }
+      .topbar, .simulator, .takeaway, .detail-card, .evidence-card { background: #102018; backdrop-filter: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav class="topbar" aria-label="Artifact context">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Garden × Eve</span>
+      </div>
+      <span class="top-note">Two explicit runtime paths</span>
+      <span class="status-chip"><span class="status-dot" aria-hidden="true"></span>1:1 proof passed</span>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <div>
+          <span class="eyebrow">Architecture explainer</span>
+          <h1>Yes—Garden can run an Eve agent 1:1.</h1>
+          <p class="hero-copy">Garden’s official Eve mode starts the exact pinned project-local <code>eve@0.27.6</code>. Eve itself compiles the authored TypeScript, runs the agent loop, emits the protocol stream, and gives terminal tools a per-session sandbox.</p>
+        </div>
+        <aside class="takeaway" aria-label="Main takeaway">
+          <p class="takeaway-label">What matters</p>
+          <p>Use <code>--runtime eve</code> for unmodified Eve semantics. Native Garden plus Codex remains a separate, narrower execution path.</p>
+        </aside>
+      </header>
+
+      <section class="evidence-grid" aria-label="Essential architecture facts">
+        <article class="evidence-card">
+          <span class="evidence-icon" aria-hidden="true">01</span>
+          <h2>No translation layer</h2>
+          <p>Garden validates and starts the official CLI. It does not parse, rewrite, or reimplement the agent’s authored TypeScript.</p>
+        </article>
+        <article class="evidence-card">
+          <span class="evidence-icon" aria-hidden="true">02</span>
+          <h2>Real TypeScript executed</h2>
+          <p>The live fixture compiled <code>tools/typescript_echo.ts</code> and returned <code>GARDEN-1TO1</code> through Eve’s real event stream.</p>
+        </article>
+        <article class="evidence-card">
+          <span class="evidence-icon" aria-hidden="true">03</span>
+          <h2>Real sandbox terminal</h2>
+          <p>The same turn ran <code>bash</code> in Eve’s pinned <code>just-bash</code> sandbox, then reached <code>session.waiting</code>.</p>
+        </article>
+      </section>
+
+      <section aria-labelledby="simulator-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">Interactive model</p>
+            <h2 id="simulator-title">Compare the two execution paths.</h2>
+          </div>
+          <p>The default path mirrors the verified fixture. Switch modes to see why Codex support is useful but not Eve parity.</p>
+        </div>
+
+        <div class="simulator">
+          <div class="sim-controls">
+            <div>
+              <label for="prompt">Eve message</label>
+              <textarea id="prompt" rows="2">Create terminal-proof.txt and verify its contents.</textarea>
+            </div>
+            <div class="control-cluster">
+              <div class="segment-wrap">
+                <label id="sandbox-label">Runtime</label>
+                <div class="segment" role="radiogroup" aria-labelledby="sandbox-label">
+                  <button type="button" role="radio" aria-checked="true" data-mode="official-eve">Official Eve · 1:1</button>
+                  <button type="button" role="radio" aria-checked="false" data-mode="native-codex">Native + Codex</button>
+                </div>
+              </div>
+              <button class="primary-button" id="run" type="button">Run simulated turn</button>
+            </div>
+          </div>
+
+          <div class="stage" aria-label="Execution path">
+            <div class="flow-line" aria-hidden="true"></div>
+            <span class="packet" aria-hidden="true"></span>
+            <div class="flow">
+              <article class="node" data-node="0">
+                <div class="node-orb"><span class="node-glyph" id="node-glyph-0">G</span></div>
+                <h3 id="node-title-0">Garden</h3>
+                <p id="node-copy-0">Validates the project-local pinned package</p>
+              </article>
+              <article class="node" data-node="1">
+                <div class="node-orb"><span class="node-glyph" id="node-glyph-1">E</span></div>
+                <h3 id="node-title-1">Official Eve</h3>
+                <p id="node-copy-1">Owns compilation, protocol, and workflow</p>
+              </article>
+              <article class="node" data-node="2">
+                <div class="node-orb"><span class="node-glyph" id="node-glyph-2">TS</span></div>
+                <h3 id="node-title-2">Authored agent</h3>
+                <p id="node-copy-2">Runs the original model and TypeScript tools</p>
+              </article>
+              <article class="node" data-node="3">
+                <div class="node-orb"><span class="node-glyph" id="node-glyph-3">›_</span></div>
+                <h3 id="node-title-3">Eve sandbox</h3>
+                <p id="sandbox-summary">Terminal runs in session-scoped /workspace</p>
+              </article>
+            </div>
+            <div class="stage-status" id="stage-status" role="status" aria-live="polite">
+              <span class="pulse" aria-hidden="true"></span>
+              <span id="stage-status-text">Ready · official Eve 1:1 selected</span>
+            </div>
+          </div>
+
+          <div class="event-drawer">
+            <section class="event-list" aria-labelledby="events-title">
+              <p class="card-label" id="events-title">Verified execution trace</p>
+              <div class="event-row" data-event="0">
+                <span class="event-index">00</span><span class="event-mark" aria-hidden="true"></span>
+                <span class="event-name" id="event-name-0">eve@0.27.6 validated</span><span class="event-value" id="event-value-0">exact</span>
+              </div>
+              <div class="event-row" data-event="1">
+                <span class="event-index">01</span><span class="event-mark" aria-hidden="true"></span>
+                <span class="event-name" id="event-name-1">eve dev --no-ui</span><span class="event-value" id="event-value-1">official</span>
+              </div>
+              <div class="event-row" data-event="2">
+                <span class="event-index">02</span><span class="event-mark" aria-hidden="true"></span>
+                <span class="event-name" id="event-name-2">actions.requested · bash</span><span class="event-value" id="event-value-2">sandbox</span>
+              </div>
+              <div class="event-row" data-event="3">
+                <span class="event-index">03</span><span class="event-mark" aria-hidden="true"></span>
+                <span class="event-name" id="event-name-3">action.result · TypeScript</span><span class="event-value" id="result-value">waiting</span>
+              </div>
+              <div class="event-row" data-event="4">
+                <span class="event-index">04</span><span class="event-mark" aria-hidden="true"></span>
+                <span class="event-name" id="event-name-4">message.completed · session.waiting</span><span class="event-value" id="event-value-4">official</span>
+              </div>
+            </section>
+
+            <aside class="record-card" aria-labelledby="record-title">
+              <p class="card-label" id="record-title">Ownership boundary</p>
+              <div class="record-grid">
+                <div class="record-box">
+                  <h3><span aria-hidden="true">●</span> <span id="kept-title">Official Eve owns</span></h3>
+                  <ul>
+                    <li id="kept-0">TypeScript compilation</li>
+                    <li id="kept-1">Model and tool loop</li>
+                    <li id="kept-status">Protocol and durability</li>
+                    <li id="kept-3">Sandboxed terminal</li>
+                  </ul>
+                </div>
+                <div class="record-box omitted">
+                  <h3><span aria-hidden="true">○</span> <span id="omitted-title">Garden only owns</span></h3>
+                  <ul>
+                    <li id="omitted-0">Pinned CLI validation</li>
+                    <li id="omitted-1">Child process group</li>
+                    <li id="omitted-2">Signals and shutdown</li>
+                    <li id="omitted-3">Operator output forwarding</li>
+                  </ul>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-grid" aria-label="Boundary details">
+        <article class="detail-card">
+          <p class="card-label">Choose the semantic owner</p>
+          <h2>One flag changes who runs the agent.</h2>
+          <p>The 1:1 claim applies only when the official Eve runtime owns execution. Native mode deliberately keeps a smaller Go contract.</p>
+          <table class="policy-table">
+            <tbody>
+              <tr><th><code>runtime eve</code></th><td>Official Eve owns authored semantics. This is the 1:1 path.</td></tr>
+              <tr><th><code>runtime native</code></th><td>Garden owns a scoped Go runner with OpenAI-compatible or Codex execution.</td></tr>
+              <tr><th>Implicit fallback</th><td><span class="mini-chip">Never</span></td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="detail-card">
+          <p class="card-label">Hard boundary</p>
+          <h2>Codex support does not create Eve parity.</h2>
+          <p>Native Codex mode is valuable when an Eve-shaped agent should inspect or edit a project. It remains separate from official Eve’s TypeScript and workflow runtime.</p>
+          <div class="config-stack" aria-label="Execution guarantees">
+            <div class="config-line"><code>official Eve</code><strong>Authored semantics + Eve sandbox</strong></div>
+            <div class="config-line"><code>native + Codex</code><strong>Codex agent + project sandbox</strong></div>
+            <div class="config-line"><code>no translator</code><strong>One semantic owner per mode</strong></div>
+            <div class="config-line"><code>loopback default</code><strong>Exposure stays intentional</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="decision" aria-labelledby="decision-title">
+        <div>
+          <p class="section-kicker">Action</p>
+          <h2 id="decision-title">Run the agent through its real Eve runtime.</h2>
+          <p id="decision-copy">Pin <code>eve@0.27.6</code> in the project, install dependencies, then select official Eve mode. Garden supervises the process; Eve remains the semantic owner.</p>
+        </div>
+        <div class="decision-code" aria-label="Garden configuration example">
+          <span id="config-line-1"><span class="key">garden serve</span> <span class="value">--runtime eve</span></span>
+          <span id="config-line-2"><span class="key">--root</span> <span class="value">./my-eve-agent</span></span>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Garden runtime architecture explainer</p>
+      <p>Interaction is illustrative · evidence comes from the live pinned fixture</p>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const runButton = document.querySelector('#run');
+      const prompt = document.querySelector('#prompt');
+      const modeButtons = [...document.querySelectorAll('[data-mode]')];
+      const nodes = [...document.querySelectorAll('[data-node]')];
+      const events = [...document.querySelectorAll('[data-event]')];
+      const packet = document.querySelector('.packet');
+      const flowLine = document.querySelector('.flow-line');
+      const stageStatus = document.querySelector('#stage-status');
+      const stageStatusText = document.querySelector('#stage-status-text');
+      const sandboxSummary = document.querySelector('#sandbox-summary');
+      const resultValue = document.querySelector('#result-value');
+      const keptStatus = document.querySelector('#kept-status');
+      const keptTitle = document.querySelector('#kept-title');
+      const omittedTitle = document.querySelector('#omitted-title');
+      const keptItems = [0, 1, 3].map((index) => document.querySelector(`#kept-${index}`));
+      const omittedItems = [0, 1, 2, 3].map((index) => document.querySelector(`#omitted-${index}`));
+      const nodeGlyphs = [0, 1, 2, 3].map((index) => document.querySelector(`#node-glyph-${index}`));
+      const nodeTitles = [0, 1, 2, 3].map((index) => document.querySelector(`#node-title-${index}`));
+      const nodeCopies = [0, 1, 2].map((index) => document.querySelector(`#node-copy-${index}`));
+      const eventNames = [0, 1, 2, 3, 4].map((index) => document.querySelector(`#event-name-${index}`));
+      const eventValues = [0, 1, 2, 4].map((index) => document.querySelector(`#event-value-${index}`));
+      const configLine1 = document.querySelector('#config-line-1');
+      const configLine2 = document.querySelector('#config-line-2');
+      const decisionTitle = document.querySelector('#decision-title');
+      const decisionCopy = document.querySelector('#decision-copy');
+      const mobileQuery = window.matchMedia('(max-width: 620px)');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      let mode = 'official-eve';
+      let runVersion = 0;
+      let timers = [];
+
+      const wait = (delay, version) => new Promise((resolve) => {
+        const pending = { timer: 0, resolve };
+        pending.timer = window.setTimeout(() => {
+          timers = timers.filter((item) => item !== pending);
+          resolve(version === runVersion);
+        }, reducedMotion.matches ? 20 : delay);
+        timers.push(pending);
+      });
+
+      const clearTimers = () => {
+        timers.forEach((pending) => {
+          window.clearTimeout(pending.timer);
+          pending.resolve(false);
+        });
+        timers = [];
+      };
+
+      const packetPosition = (index) => {
+        const desktopPositions = [8, 36, 64, 92];
+        const mobilePositions = [7, 35, 64, 93];
+        if (mobileQuery.matches) {
+          packet.style.left = '50%';
+          packet.style.top = `${mobilePositions[index]}%`;
+        } else {
+          packet.style.top = '3rem';
+          packet.style.left = `${desktopPositions[index]}%`;
+        }
+      };
+
+      const setNode = (index) => {
+        nodes.forEach((node, nodeIndex) => {
+          node.classList.toggle('is-active', nodeIndex === index);
+          node.classList.toggle('is-complete', nodeIndex < index);
+        });
+        packetPosition(index);
+        flowLine.style.setProperty('--flow-progress', String(index / 3));
+      };
+
+      const setEvent = (index) => {
+        events.forEach((event, eventIndex) => {
+          event.classList.toggle('is-active', eventIndex === index);
+          event.classList.toggle('is-complete', eventIndex < index);
+        });
+      };
+
+      const reset = () => {
+        clearTimers();
+        nodes.forEach((node) => node.classList.remove('is-active', 'is-complete'));
+        events.forEach((event) => event.classList.remove('is-active', 'is-complete'));
+        flowLine.style.setProperty('--flow-progress', '0');
+        packetPosition(0);
+        packet.classList.remove('is-visible');
+        stageStatus.classList.remove('is-running');
+        resultValue.textContent = 'waiting';
+        runButton.textContent = 'Run simulated turn';
+      };
+
+      const setMode = (nextMode) => {
+        mode = nextMode;
+        reset();
+        modeButtons.forEach((button) => button.setAttribute('aria-checked', String(button.dataset.mode === mode)));
+        const official = mode === 'official-eve';
+        const nodeContent = official
+          ? [
+              ['G', 'Garden', 'Validates the project-local pinned package'],
+              ['E', 'Official Eve', 'Owns compilation, protocol, and workflow'],
+              ['TS', 'Authored agent', 'Runs the original model and TypeScript tools'],
+              ['›_', 'Eve sandbox', 'Terminal runs in session-scoped /workspace'],
+            ]
+          : [
+              ['E', 'Eve-shaped input', 'Supplies intent and discovered instructions'],
+              ['G', 'Native Garden', 'Owns history and the scoped Go workflow'],
+              ['›_', 'Codex CLI', 'Plans the work and emits JSONL events'],
+              ['▣', 'Project sandbox', 'May read and write only inside the project'],
+            ];
+        nodeContent.forEach(([glyph, title, copy], index) => {
+          nodeGlyphs[index].textContent = glyph;
+          nodeTitles[index].textContent = title;
+          if (index < 3) nodeCopies[index].textContent = copy;
+        });
+        sandboxSummary.textContent = nodeContent[3][2];
+
+        const names = official
+          ? ['eve@0.27.6 validated', 'eve dev --no-ui', 'actions.requested · bash', 'action.result · TypeScript', 'message.completed · session.waiting']
+          : ['message.received', 'codex exec --json --ephemeral', 'actions.requested · terminal', 'action.result', 'message.completed · turn.completed'];
+        const values = official ? ['exact', 'official', 'sandbox', 'official'] : ['durable', 'boundary', 'metadata', 'durable'];
+        eventNames.forEach((element, index) => element.textContent = names[index]);
+        eventValues.forEach((element, index) => element.textContent = values[index]);
+
+        keptTitle.textContent = official ? 'Official Eve owns' : 'Native Garden keeps';
+        keptItems[0].textContent = official ? 'TypeScript compilation' : 'User and final messages';
+        keptItems[1].textContent = official ? 'Model and tool loop' : 'Tool name: terminal';
+        keptStatus.textContent = official ? 'Protocol and durability' : 'Status and exit code';
+        keptItems[2].textContent = official ? 'Sandboxed terminal' : 'Turn and sequence IDs';
+        omittedTitle.textContent = official ? 'Garden only owns' : 'Native Garden omits';
+        const omitted = official
+          ? ['Pinned CLI validation', 'Child process group', 'Signals and shutdown', 'Operator output forwarding']
+          : ['Command text', 'stdout and stderr', 'Codex session files', 'Credential contents'];
+        omittedItems.forEach((element, index) => element.textContent = omitted[index]);
+
+        if (official) {
+          decisionTitle.textContent = 'Run the agent through its real Eve runtime.';
+          decisionCopy.innerHTML = 'Pin <code>eve@0.27.6</code> in the project, install dependencies, then select official Eve mode. Garden supervises the process; Eve remains the semantic owner.';
+          configLine1.innerHTML = '<span class="key">garden serve</span> <span class="value">--runtime eve</span>';
+          configLine2.innerHTML = '<span class="key">--root</span> <span class="value">./my-eve-agent</span>';
+        } else {
+          decisionTitle.textContent = 'Use Codex when the native subset is the right tradeoff.';
+          decisionCopy.innerHTML = 'Native mode can delegate a complete turn to your logged-in Codex CLI with <code>read-only</code> or <code>workspace-write</code> authority. It is useful, but it is not full Eve semantics.';
+          configLine1.innerHTML = '<span class="key">GARDEN_MODEL_BACKEND</span>=<span class="value">codex</span>';
+          configLine2.innerHTML = '<span class="key">GARDEN_CODEX_SANDBOX</span>=<span class="value">workspace-write</span>';
+        }
+        stageStatusText.textContent = official ? 'Ready · official Eve 1:1 selected' : 'Ready · native Garden plus Codex selected';
+      };
+
+      modeButtons.forEach((button, index) => {
+        button.addEventListener('pointerdown', () => button.style.filter = 'brightness(1.18)');
+        button.addEventListener('pointerup', () => button.style.filter = '');
+        button.addEventListener('pointercancel', () => button.style.filter = '');
+        button.addEventListener('click', () => setMode(button.dataset.mode));
+        button.addEventListener('keydown', (event) => {
+          if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+          event.preventDefault();
+          const nextIndex = event.key === 'ArrowRight' ? (index + 1) % modeButtons.length : (index - 1 + modeButtons.length) % modeButtons.length;
+          modeButtons[nextIndex].focus();
+          setMode(modeButtons[nextIndex].dataset.mode);
+        });
+      });
+
+      runButton.addEventListener('pointerdown', () => runButton.dataset.pressed = 'true');
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach((name) => runButton.addEventListener(name, () => delete runButton.dataset.pressed));
+
+      runButton.addEventListener('click', async () => {
+        const version = ++runVersion;
+        reset();
+        packet.classList.add('is-visible');
+        stageStatus.classList.add('is-running');
+        runButton.textContent = 'Restart simulation';
+
+        const message = prompt.value.trim() || 'Complete the Eve request.';
+        const official = mode === 'official-eve';
+        setNode(0);
+        setEvent(0);
+        stageStatusText.textContent = official
+          ? 'Garden validates the exact project-local Eve package'
+          : `Garden receives: “${message.slice(0, 60)}${message.length > 60 ? '…' : ''}”`;
+        if (!await wait(620, version)) return;
+
+        setNode(1);
+        setEvent(1);
+        stageStatusText.textContent = official
+          ? 'Garden starts the official headless Eve host without a shell'
+          : 'Native Garden restores history and starts an ephemeral Codex turn';
+        if (!await wait(720, version)) return;
+
+        setNode(2);
+        setEvent(2);
+        stageStatusText.textContent = official
+          ? 'Official Eve compiles the authored agent and requests sandboxed bash'
+          : 'Codex plans a terminal action inside the project sandbox';
+        if (!await wait(760, version)) return;
+
+        setNode(3);
+        setEvent(3);
+        if (official) {
+          resultValue.textContent = '2 results';
+          keptStatus.textContent = 'Protocol and durability';
+          stageStatusText.textContent = 'Eve returns bash output, then executes the authored TypeScript tool';
+        } else {
+          resultValue.textContent = 'exit 0';
+          keptStatus.textContent = 'completed · exitCode 0';
+          stageStatusText.textContent = 'Codex executes inside the selected project sandbox';
+        }
+        if (!await wait(820, version)) return;
+
+        nodes.forEach((node) => node.classList.remove('is-active'));
+        nodes.forEach((node) => node.classList.add('is-complete'));
+        setEvent(4);
+        packet.classList.remove('is-visible');
+        stageStatus.classList.remove('is-running');
+        stageStatusText.textContent = official
+          ? '1:1 turn complete · authored final message reached session.waiting'
+          : 'Native Codex turn complete · final answer and safe metadata are durable';
+        runButton.textContent = 'Run again';
+      });
+
+      mobileQuery.addEventListener('change', () => packetPosition(0));
+      setMode(mode);
+    })();
+  </script>
+</body>
+</html>
