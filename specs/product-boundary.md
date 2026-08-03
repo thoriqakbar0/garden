@@ -2,12 +2,18 @@
 
 ## Definition
 
-Garden is a single Go binary that loads a documented subset of an Eve-shaped
-project and runs it locally or on self-hosted infrastructure.
+Garden exposes two explicit execution contracts. Official Eve mode supervises
+the pinned project-local official Eve CLI and therefore executes an unmodified
+Eve project with Eve's own TypeScript compiler and runtime. Native mode is a Go
+runtime for a documented subset of an Eve-shaped project. Native
+OpenAI-compatible mode is self-contained; native Codex mode invokes a locally
+installed Codex CLI authenticated with `codex login`.
 
-The filesystem is the authoring input. Garden owns execution, persistence, and
-HTTP serving. A model endpoint may be remote, but the runner MUST remain usable
-without Vercel runtime, deployment, Workflow SDK, storage, or hosted services.
+The filesystem is the authoring input. In official Eve mode, Eve owns execution,
+persistence, HTTP behavior, authorization, and sandboxing while Garden owns the
+child-process lifecycle. In native mode, Garden owns execution, persistence,
+and HTTP serving. A model endpoint may be remote, but Garden itself MUST remain
+usable without a hosted Garden service.
 
 ## User-visible outcome
 
@@ -22,9 +28,24 @@ supported by the Garden binary, a user can:
 6. restart Garden without losing the conversation or repeating a completed
    tool side effect.
 
-## Supported authoring subset
+## Official Eve mode
 
-Garden MUST document and validate the subset it executes.
+`serve --runtime eve` MUST execute the exact project-local Eve version recorded
+in [`UPSTREAM.md`](../UPSTREAM.md). Garden MUST NOT fall back to a global CLI,
+translate authored files, replace Eve's storage or routes, or claim parity after
+starting a different package version. The official runtime owns every authored
+capability it supports, including TypeScript, sandboxes, terminal tools, hooks,
+channels, connections, subagents, schedules, and workflow semantics.
+
+Garden MUST forward termination to the full Eve process group and MUST report a
+non-zero child exit without leaking an invented successful state. The project is
+trusted application code: the official process inherits the project environment
+and authored tools execute with Eve's documented Node.js privileges. Sandboxed
+terminal commands remain owned by Eve's sandbox contract.
+
+## Native supported authoring subset
+
+Native Garden MUST document and validate the subset it executes.
 
 | Eve-shaped path | Garden meaning |
 | --- | --- |
@@ -39,7 +60,7 @@ JavaScript and TypeScript files are not executable merely because Garden
 discovers them. Startup MUST fail with a clear capability error when a required
 tool has no supported executor. Discovery MUST NOT be presented as execution.
 
-## Execution boundary
+## Native execution boundary
 
 The first supported tool mechanism is an explicit build-time manifest of native
 Go tools. A manifest entry binds a discovered Eve tool identifier to:
@@ -53,11 +74,16 @@ Garden MAY add HTTP, WASM, or subprocess executors later, but each requires a
 separate trust and lifecycle contract. Garden MUST NOT imply arbitrary
 TypeScript execution.
 
+The Codex executor is an explicit subprocess boundary. It MUST use Codex JSONL
+events, a bounded turn deadline, non-interactive approval policy, a scrubbed
+shell environment, and either `read-only` or project-scoped `workspace-write`
+sandboxing. Garden MUST reject unsandboxed Codex execution. Terminal command
+text and output MUST NOT be copied into Garden's durable workflow log.
+
 ## Explicit non-goals
 
-The initial runner does not:
+Native mode does not:
 
-- replace Eve as an authoring framework;
 - reproduce every Eve capability;
 - deploy to Vercel;
 - emit `vercel.json`;
@@ -80,4 +106,3 @@ echo responder.
 An offline diagnostic responder MAY remain behind an explicit flag or test-only
 entry point. Its output and documentation must identify it as a workflow
 diagnostic, not an agent result.
-

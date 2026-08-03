@@ -15,12 +15,25 @@ func TestAuthenticatedHandlerRequiresTokenForPublicBind(t *testing.T) {
 }
 
 func TestServeDefaultsToLoopback(t *testing.T) {
-	_, addr, err := commonFlags("serve", nil, true)
+	options, err := parseServeOptions(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if addr != "127.0.0.1:3000" {
-		t.Fatalf("default address = %q", addr)
+	if options.addr != "127.0.0.1:3000" {
+		t.Fatalf("default address = %q", options.addr)
+	}
+	if options.runtime != "native" {
+		t.Fatalf("default runtime = %q", options.runtime)
+	}
+}
+
+func TestServeSelectsOfficialEveRuntimeExplicitly(t *testing.T) {
+	options, err := parseServeOptions([]string{"--runtime", "eve", "--root", "/tmp/agent"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if options.runtime != "eve" || options.root != "/tmp/agent" {
+		t.Fatalf("options = %+v", options)
 	}
 }
 

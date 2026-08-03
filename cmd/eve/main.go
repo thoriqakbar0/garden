@@ -19,6 +19,7 @@ import (
 
 	"github.com/thoriqakbar0/garden/internal/agent"
 	"github.com/thoriqakbar0/garden/internal/discover"
+	"github.com/thoriqakbar0/garden/internal/evehost"
 	"github.com/thoriqakbar0/garden/internal/server"
 	"github.com/thoriqakbar0/garden/internal/workflow"
 )
@@ -62,7 +63,7 @@ Usage:
   eve init [directory]
   eve info [--root directory]
   eve run [--root directory] --message text [--session id]
-  eve serve [--root directory] [--addr 127.0.0.1:3000]
+  eve serve [--root directory] [--addr 127.0.0.1:3000] [--runtime native|eve]
   eve eval [--root directory] --list
   eve version`)
 	return errors.New("a command is required")
@@ -154,11 +155,14 @@ func runOnce(args []string) error {
 }
 
 func serve(args []string) (returnErr error) {
-	root, addr, err := commonFlags("serve", args, true)
+	options, err := parseServeOptions(args)
 	if err != nil {
 		return err
 	}
-	app, err := discover.ApplicationAt(root)
+	if options.runtime == "eve" {
+		return serveOfficialEve(options)
+	}
+	app, err := discover.ApplicationAt(options.root)
 	if err != nil {
 		return err
 	}
@@ -166,18 +170,18 @@ func serve(args []string) (returnErr error) {
 	if err != nil {
 		return err
 	}
-	store, err := workflow.OpenRunner(filepath.Join(root, ".eve", "workflow-data"), runner)
+	store, err := workflow.OpenRunner(filepath.Join(options.root, ".eve", "workflow-data"), runner)
 	if err != nil {
 		return err
 	}
 	defer func() { returnErr = errors.Join(returnErr, store.Close()) }()
-	handler, err := authenticatedHandler(addr, os.Getenv("GARDEN_AUTH_TOKEN"), server.Handler(app, store))
+	handler, err := authenticatedHandler(options.addr, os.Getenv("GARDEN_AUTH_TOKEN"), server.Handler(app, store))
 	if err != nil {
 		return err
 	}
-	log.Printf("garden listening on %s", addr)
+	log.Printf("garden listening on %s", options.addr)
 	httpServer := &http.Server{
-		Addr:              addr,
+		Addr:              options.addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -198,6 +202,44 @@ func serve(args []string) (returnErr error) {
 	}()
 	err = httpServer.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
+}
+
+type serveOptions struct {
+	addr    string
+	root    string
+	runtime string
+}
+
+func parseServeOptions(args []string) (serveOptions, error) {
+	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
+	root := flags.String("root", ".", "project root")
+	addr := flags.String("addr", "127.0.0.1:3000", "listen address")
+	runtimeName := flags.String("runtime", "native", "runtime implementation: native or eve")
+	if err := flags.Parse(args); err != nil {
+		return serveOptions{}, err
+	}
+	if flags.NArg() != 0 {
+		return serveOptions{}, errors.New("serve does not accept positional arguments")
+	}
+	runtimeValue := strings.ToLower(strings.TrimSpace(*runtimeName))
+	if runtimeValue != "native" && runtimeValue != "eve" {
+		return serveOptions{}, errors.New("serve --runtime must be native or eve")
+	}
+	return serveOptions{addr: *addr, root: *root, runtime: runtimeValue}, nil
+}
+
+func serveOfficialEve(options serveOptions) error {
+	host, err := evehost.Open(options.root, options.addr)
+	if err != nil {
+		return err
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	err = host.Run(ctx, os.Stdout, os.Stderr)
+	if errors.Is(err, context.Canceled) && ctx.Err() != nil {
 		return nil
 	}
 	return err

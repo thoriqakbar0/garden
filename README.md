@@ -1,32 +1,39 @@
 # Garden
 
-Garden is a self-hosted runtime for [Eve](https://github.com/vercel/eve)-shaped
-agents. It is a dependency-free Go binary that discovers an agent from the
-filesystem, runs real model and native-tool turns, exposes Eve protocol-v19
-HTTP streams, and keeps durable local workflow state.
+Garden runs [Eve](https://github.com/vercel/eve) agents locally in two explicit
+modes. `--runtime eve` supervises the pinned project-local official Eve runtime,
+so an unmodified Eve agent keeps its authored TypeScript, tools, hooks, channels,
+connections, subagents, schedules, workflow semantics, and sandboxed terminal.
+The default native mode is a standalone Go runtime for a smaller Eve-shaped
+conversation contract, with either the local Codex CLI or an OpenAI-compatible
+model endpoint.
 
-Garden targets the core conversational runner contract, not the complete Eve
-authoring framework. It does not require Vercel runtime, Workflow SDK, hosted
-storage, or a JavaScript process.
+Neither mode requires a hosted Garden service. Official Eve mode requires Node
+24 and the pinned `eve` npm dependency in the agent project. Native mode remains
+a single Go process with local workflow storage and no JavaScript runtime.
 
 > [!WARNING]
-> Garden is still work in progress. The session, streaming, model, native-tool,
-> cancellation, and local recovery paths are implemented. Arbitrary authored
-> TypeScript, sandboxes, channels, connections, hooks, subagents, and eval
-> execution remain outside the supported runtime subset.
+> Garden is still work in progress. Full authored Eve behavior is available
+> only through explicit official Eve mode. Native mode implements sessions,
+> streaming, model and native-tool turns, the Codex terminal, cancellation, and
+> local recovery; it does not execute arbitrary authored TypeScript.
 
 ## Compatibility
 
 Compatibility is pinned to the Eve revision in [`UPSTREAM.md`](UPSTREAM.md).
-The percentage is intentionally not presented as full Eve parity: Garden
-implements roughly 80% of the scoped self-hosted conversational-runtime
-contract, not 80% of Eve's entire framework and tooling surface.
+Official Eve mode is 1:1 by process ownership: the pinned official runtime
+compiles and executes the project itself. Native mode has the narrower contract
+described below and does not claim complete Eve parity.
 
 | Capability | Status | Garden behavior |
 | --- | --- | --- |
+| Official Eve runtime | Available | `serve --runtime eve` runs project-local `eve@0.27.6`; official Eve owns authored semantics and wire behavior. |
+| Authored TypeScript | Official Eve mode | Tools, hooks, channels, connections, subagents, schedules, sandboxes, and other supported Eve modules execute unchanged. |
+| Sandboxed terminal | Official Eve mode | Eve's built-in terminal tools use the agent's authored or default Eve sandbox backend and session-scoped `/workspace`. |
 | Eve project discovery | Available | Discovers instructions, model, tools, skills, channels, connections, subagents, schedules, and evals. |
-| Model execution | Available | OpenAI Chat Completions-compatible endpoints and local Codex credentials. |
+| Model execution | Available | Sandboxed Codex CLI execution and OpenAI Chat Completions-compatible endpoints. |
 | Native tool loop | Available | Model -> tool -> model with bounded requests, deadlines, cancellation, and durable Eve events. |
+| Codex terminal | Available | Codex may run terminal commands inside the project sandbox; command text and output are not copied into Garden's durable log. |
 | Eve HTTP sessions | Available | Create, continue, stream, and cancel routes with protocol-v19 envelopes and headers. |
 | Live NDJSON | Available | Immediate prelude, incremental flush, absolute replay, and tail-relative replay. |
 | Continuation tokens | Available | Opaque token ownership follows Eve's channel/session boundary. |
@@ -42,14 +49,22 @@ contract, not 80% of Eve's entire framework and tooling surface.
 
 ## Quickstart
 
-Garden requires Go 1.25 or newer. The local single-writer runtime currently
-supports macOS and Linux and fails closed on platforms without its process-lock
-implementation.
+For native mode you need:
+
+- Go 1.25 or newer;
+- macOS or Linux; and
+- either a Codex login or an OpenAI-compatible model endpoint.
+
+Official Eve mode instead needs Node 24 or newer and project-local
+`eve@0.27.6`.
+
+The local runtime allows one Garden writer per workflow store and fails closed
+on platforms without its process-lock implementation.
 
 ```sh
 git clone https://github.com/thoriqakbar0/garden.git
 cd garden
-CGO_ENABLED=0 go build -trimpath -o garden ./cmd/eve
+make build
 ```
 
 Inspect the included Eve weather agent:
@@ -58,7 +73,7 @@ Inspect the included Eve weather agent:
 ./garden info --root examples/eve-weather
 ```
 
-Run it with the credential created by the Codex CLI:
+Run it with credentials created by the Codex CLI:
 
 ```sh
 codex login
@@ -86,17 +101,78 @@ Continue the same local conversation with `--session`:
 Normal `run` and `serve` commands require a configured model backend. They do
 not silently return a diagnostic echo.
 
+Next, choose the relevant path:
+
+- [run an unmodified Eve agent](#official-eve-mode);
+- [configure another model backend](#model-configuration);
+- [serve the Eve-compatible HTTP API](#http-runtime); or
+- [adapt an Eve-shaped project](#supported-project-shape).
+
+## Official Eve mode
+
+Use this mode when the goal is to run an Eve agent 1:1 rather than port its
+behavior into Garden's native Go subset. In the Eve project, pin and install the
+baseline package:
+
+```json
+{
+  "dependencies": {
+    "eve": "0.27.6"
+  }
+}
+```
+
+Then start it through Garden:
+
+```sh
+npm install
+/path/to/garden serve \
+  --runtime eve \
+  --root /path/to/eve-agent \
+  --addr 127.0.0.1:3000
+```
+
+Garden validates the exact package version and project-local executable, then
+runs `eve dev --no-ui` and owns its signal and shutdown lifecycle. Garden does
+not translate the agent or intercept its protocol: the official runtime owns
+compilation, model calls, durable sessions, routes, authorization, and sandbox
+selection. The process receives the Eve project's environment because authored
+tools and connections may require it.
+
+Eve's built-in `bash`, `read_file`, `write_file`, `glob`, and `grep` tools run
+inside Eve's per-session sandbox, not in the Garden process. Choose and secure
+the sandbox backend in the Eve project; the framework default may select Docker,
+microsandbox, or the pure-JavaScript `just-bash` fallback depending on the host.
+
+`GARDEN_MODEL_BACKEND=codex` belongs to native mode and is not injected into the
+official Eve runtime. Likewise, Garden's native bearer wrapper does not wrap
+official Eve routes. Keep the official host on loopback unless the Eve project
+or a trusted reverse proxy provides the intended external authorization.
+
 ## Model configuration
 
 | Variable | Meaning |
 | --- | --- |
 | `GARDEN_MODEL_BACKEND` | Required: `openai` or `codex`. |
 | `GARDEN_MODEL` | Optional model override. When unset, `openai` uses the literal model discovered in `agent/agent.ts`; `codex` defaults to `gpt-5.6-sol`. |
+| `GARDEN_CODEX_SANDBOX` | Optional Codex terminal policy: `workspace-write` (default) or `read-only`. Garden rejects `danger-full-access`. |
 | `GARDEN_OPENAI_BASE_URL` | OpenAI-compatible API base. Defaults to `https://api.openai.com/v1` when an API key is set. |
 | `GARDEN_OPENAI_API_KEY` | Optional bearer credential; local endpoints may omit it. |
 | `CODEX_HOME` | Codex state directory, default `~/.codex`. |
-| `GARDEN_CODEX_BASE_URL` | Optional compatible Responses API base. |
 | `GARDEN_AUTH_TOKEN` | Required bearer token when `serve` binds beyond loopback. |
+
+The `codex` backend delegates each Eve turn to `codex exec --json`. Codex can
+inspect the project and use its terminal tools. Garden sets a ten-minute turn
+deadline, disables interactive approvals, strips the parent shell environment
+down to Codex's core command environment, blocks login-shell rehydration, and
+confines writes to the project root. A command that needs network or access
+outside the sandbox fails instead of waiting for approval.
+
+Use read-only terminal access when the agent should inspect but never edit:
+
+```sh
+export GARDEN_CODEX_SANDBOX=read-only
+```
 
 OpenAI-compatible example:
 
@@ -107,14 +183,16 @@ export GARDEN_MODEL=gpt-5.4-mini
 ./garden run --root examples/eve-weather --message "Weather in Jakarta?"
 ```
 
-Requests, responses, tool inputs, tool outputs, and Codex auth input are bounded
-to 1 MiB. Each model or tool step has a 60-second deadline and one turn may use
-at most eight model rounds. Credentials and upstream response bodies are not
+OpenAI-compatible requests, responses, and native tool payloads are bounded to
+1 MiB. Each OpenAI model or tool step has a 60-second deadline and one turn may
+use at most eight model rounds. Codex prompts and individual JSON event records
+are also bounded to 1 MiB. Credentials and upstream response bodies are not
 included in public errors.
 
-The compiled manifest currently binds only `get_weather`. It returns fixture
-data to prove the execution boundary. A declared tool without a native binding
-causes startup to fail.
+For the `openai` backend, the compiled manifest currently binds only
+`get_weather`. It returns fixture data to prove the execution boundary. A
+declared tool without a native binding causes startup to fail. The `codex`
+backend instead uses Codex's sandboxed terminal runtime.
 
 ## HTTP runtime
 
@@ -206,8 +284,9 @@ my-agent/
 ```
 
 Garden statically reads paths and selected literal configuration. JavaScript
-and TypeScript files are declarations, not executable code. Native tool
-bindings are selected by the discovered tool identifier.
+and TypeScript files are declarations, not automatically executable modules.
+The OpenAI backend selects native tool bindings by discovered identifier; the
+Codex backend can inspect and operate on the project through its terminal.
 
 ## Workflow integrity
 
@@ -225,9 +304,11 @@ Cancellation does not return `accepted` until its intent is durable. Settlement
 then ends with exactly one `turn.cancelled` and the following
 `session.waiting`; recovery finishes that boundary after a crash.
 
-Native tool arguments and results remain durable internal events. The HTTP
-stream exposes only event types proven by the pinned Eve-v19 contract, and its
-absolute and negative cursors count that public projection.
+OpenAI native-tool arguments and results remain durable internal events. Codex
+terminal commands record lifecycle and exit status but deliberately omit the
+command text and output from Garden's durable log. The HTTP stream exposes only
+event types proven by the pinned Eve-v19 contract, and its absolute and negative
+cursors count that public projection.
 
 The store is intentionally local and single-writer. Back up the project and
 its `.eve` directory together. Pre-v19 Garden session logs are validated and
@@ -254,8 +335,8 @@ make test
 make check
 ```
 
-The hermetic suite covers discovery, the OpenAI-compatible and Codex provider
-boundaries, the native tool loop, protocol-v19 create/continue/stream/cancel,
+The hermetic suite covers discovery, the OpenAI-compatible provider, sandboxed
+Codex execution, the native tool loop, protocol-v19 create/continue/stream/cancel,
 live flushing, cursor resume, continuation ownership, cancellation races,
 session traversal rejection, concurrent sessions, and restart repair.
 

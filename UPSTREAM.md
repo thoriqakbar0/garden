@@ -4,6 +4,8 @@ Source: `https://github.com/vercel/eve`
 
 Commit: `05f348023d4268c974c225c1189a283ace20b742`
 
+Official runtime package: `eve@0.27.6`
+
 Behavioral fixtures ported into native Go tests:
 
 - `e2e/fixtures/agent-workflow-stress/evals/sequential-workflow-turns.eval.ts`

@@ -2,6 +2,9 @@
 
 ## Goal
 
+This document specifies native mode. Exact authored Eve execution is a separate
+contract in [Official Eve host](official-eve-host.md).
+
 Run one real agent turn through an OpenAI-compatible model and an explicitly
 supported native tool:
 
@@ -71,6 +74,25 @@ The first manifest contains a deterministic native `get_weather` tool solely
 to prove the execution boundary. It is an example capability, not a claim of
 live meteorological data.
 
+## Codex execution boundary
+
+With `GARDEN_MODEL_BACKEND=codex`, Garden delegates the complete turn to the
+local Codex CLI instead of exposing Garden's native manifest to a raw model
+endpoint. Codex MAY use terminal tools within the agent project. Garden MUST:
+
+- consume `codex exec --json` events without parsing human output;
+- run non-interactively with either `read-only` or `workspace-write` sandboxing;
+- reject `danger-full-access`;
+- prevent shell commands from inheriting the parent process environment;
+- propagate cancellation and enforce a bounded turn deadline;
+- translate command and final-message boundaries into Garden workflow events;
+- omit command text and terminal output from durable Garden events; and
+- require a completed Codex turn and non-empty final agent message.
+
+Garden owns Eve session history. Codex executions are ephemeral, and each new
+turn receives the completed conversation reconstructed from Garden's durable
+events.
+
 ## Conversation and durability
 
 The model request MUST include:
@@ -105,6 +127,10 @@ Hermetic tests MUST use a fake OpenAI-compatible server and the real
 - model and tool errors do not leak secrets; and
 - the CLI and HTTP server select the same runner.
 
+Hermetic Codex-exec tests MUST use a fake executable and prove sandbox flags,
+conversation projection, terminal lifecycle translation, final answer capture,
+and omission of command text and output from durable events. They MUST NOT
+require live credentials.
+
 A credentialed smoke test is useful but optional. Hermetic proof is required
 and must never depend on a developer secret.
-
