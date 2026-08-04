@@ -132,6 +132,64 @@ func TestRuntimeSelectsCodexExecBackend(t *testing.T) {
 	}
 }
 
+func TestRuntimeAutoDetectsCodexExecBackend(t *testing.T) {
+	app := discover.Application{Root: t.TempDir(), Instructions: "test"}
+	lookups := 0
+	runner, err := runnerFromEnvironment(
+		app,
+		env(nil),
+		func(name string) (string, error) {
+			lookups++
+			if name != "codex" {
+				t.Fatalf("looked up %q", name)
+			}
+			return "/usr/local/bin/codex", nil
+		},
+		nil,
+		time.Time{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := runner.(*codexExecRunner); !ok {
+		t.Fatalf("runner = %T, want *codexExecRunner", runner)
+	}
+	if lookups != 1 {
+		t.Fatalf("Codex CLI lookups = %d, want 1", lookups)
+	}
+}
+
+func TestRuntimeRequiresBackendWhenCodexIsMissing(t *testing.T) {
+	app := discover.Application{Root: t.TempDir(), Instructions: "test", Model: "model"}
+	_, err := runnerFromEnvironment(
+		app,
+		env(nil),
+		func(string) (string, error) { return "", errors.New("not found") },
+		nil,
+		time.Time{},
+	)
+	if err == nil || !strings.Contains(err.Error(), "GARDEN_MODEL_BACKEND") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestRuntimeDoesNotOverrideExplicitBackend(t *testing.T) {
+	app := discover.Application{Root: t.TempDir(), Instructions: "test", Model: "model"}
+	_, err := runnerFromEnvironment(
+		app,
+		env(map[string]string{"GARDEN_MODEL_BACKEND": "unsupported"}),
+		func(string) (string, error) {
+			t.Fatal("explicit backend caused a Codex lookup")
+			return "", nil
+		},
+		nil,
+		time.Time{},
+	)
+	if err == nil || !strings.Contains(err.Error(), "GARDEN_MODEL_BACKEND") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestCodexExecPromptCarriesCompletedConversation(t *testing.T) {
 	runner := &codexExecRunner{instructions: "Be concise.", root: t.TempDir()}
 	prompt, err := runner.prompt(workflow.Turn{

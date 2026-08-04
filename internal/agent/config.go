@@ -32,8 +32,14 @@ func runnerFromEnvironment(
 	client *http.Client,
 	now time.Time,
 ) (workflow.Runner, error) {
-	if strings.EqualFold(strings.TrimSpace(getenv("GARDEN_MODEL_BACKEND")), "codex") {
+	backendName := strings.ToLower(strings.TrimSpace(getenv("GARDEN_MODEL_BACKEND")))
+	if backendName == "codex" {
 		return codexExecRunnerFromConfig(app, getenv, lookPath)
+	}
+	if backendName == "" {
+		if command, err := lookPath("codex"); err == nil {
+			return codexExecRunnerFromCommand(app, getenv, command)
+		}
 	}
 	return runnerFromConfig(app, getenv, client, now)
 }
