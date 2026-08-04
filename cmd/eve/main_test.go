@@ -1,11 +1,70 @@
 package main
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
+
+func TestHelpDocumentsGardenInstallation(t *testing.T) {
+	for _, argument := range []string{"help", "--help", "-h"} {
+		t.Run(argument, func(t *testing.T) {
+			var output strings.Builder
+			if err := run([]string{argument}, &output); err != nil {
+				t.Fatal(err)
+			}
+			for _, required := range []string{
+				"garden <command> [options]",
+				"make install",
+				"$HOME/.local/bin/garden",
+				"command -v garden",
+				"garden version",
+			} {
+				if !strings.Contains(output.String(), required) {
+					t.Fatalf("help omits %q", required)
+				}
+			}
+		})
+	}
+}
+
+func TestUnknownCommandReturnsGardenUsage(t *testing.T) {
+	err := run([]string{"unknown"}, io.Discard)
+	if err == nil {
+		t.Fatal("unknown command succeeded")
+	}
+	for _, required := range []string{`unknown command "unknown"`, "garden <command> [options]"} {
+		if !strings.Contains(err.Error(), required) {
+			t.Fatalf("error omits %q: %v", required, err)
+		}
+	}
+}
+
+func TestHelpReportsOutputFailure(t *testing.T) {
+	err := run([]string{"help"}, failingWriter{})
+	if err == nil || !strings.Contains(err.Error(), "write help") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestCommandHelpSucceeds(t *testing.T) {
+	for _, command := range []string{"init", "info", "run", "serve", "eval"} {
+		t.Run(command, func(t *testing.T) {
+			if err := run([]string{command, "--help"}, io.Discard); err != nil {
+				t.Fatalf("%s --help: %v", command, err)
+			}
+		})
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errors.New("write failed")
+}
 
 func TestAuthenticatedHandlerRequiresTokenForPublicBind(t *testing.T) {
 	_, err := authenticatedHandler("0.0.0.0:3000", "", http.NotFoundHandler())

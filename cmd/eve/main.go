@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -26,51 +27,81 @@ import (
 
 const version = "0.1.0"
 
+const helpText = `garden: run Eve agents locally
+
+Usage:
+  garden <command> [options]
+
+Commands:
+  init [directory]             Create an Eve-shaped agent project.
+  info [--root directory]      Inspect a discovered agent project.
+  run --message text           Run one native agent turn.
+  serve [options]              Start the native or official Eve server.
+  eval --list                  List discovered evaluations.
+  help                         Show this help.
+  version                      Show the Garden version.
+
+Install from a source checkout:
+  make install
+
+The default destination is $HOME/.local/bin/garden.
+Set BINDIR to select another destination:
+  make install BINDIR="$HOME/bin"
+
+Verify the installation:
+  command -v garden
+  garden version
+
+Run "garden <command> --help" to show command options.`
+
 func main() {
-	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "eve:", err)
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, "garden:", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string) error {
+func run(args []string, output io.Writer) error {
 	if len(args) == 0 {
-		return usage()
+		return usageError("a command is required")
 	}
+	var commandErr error
 	switch args[0] {
 	case "init":
-		return initProject(args[1:])
+		commandErr = initProject(args[1:])
 	case "info":
-		return info(args[1:])
+		commandErr = info(args[1:])
 	case "run":
-		return runOnce(args[1:])
+		commandErr = runOnce(args[1:])
 	case "serve", "dev", "start":
-		return serve(args[1:])
+		commandErr = serve(args[1:])
 	case "eval":
-		return eval(args[1:])
+		commandErr = eval(args[1:])
+	case "help", "--help", "-h":
+		if _, err := fmt.Fprintln(output, helpText); err != nil {
+			return fmt.Errorf("write help: %w", err)
+		}
+		return nil
 	case "version", "--version", "-v":
-		fmt.Println(version)
+		if _, err := fmt.Fprintln(output, version); err != nil {
+			return fmt.Errorf("write version: %w", err)
+		}
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q\n\n%w", args[0], usage())
+		return usageError(fmt.Sprintf("unknown command %q", args[0]))
 	}
+	if errors.Is(commandErr, flag.ErrHelp) {
+		return nil
+	}
+	return commandErr
 }
 
-func usage() error {
-	fmt.Fprintln(os.Stderr, `garden: a self-hosted runtime for Eve agents
-
-Usage:
-  eve init [directory]
-  eve info [--root directory]
-  eve run [--root directory] --message text [--session id]
-  eve serve [--root directory] [--addr 127.0.0.1:3000] [--runtime native|eve]
-  eve eval [--root directory] --list
-  eve version`)
-	return errors.New("a command is required")
+func usageError(message string) error {
+	return fmt.Errorf("%s\n\n%s", message, helpText)
 }
 
 func initProject(args []string) error {
-	flags := flag.NewFlagSet("init", flag.ContinueOnError)
+	flags := flag.NewFlagSet("garden init", flag.ContinueOnError)
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -117,7 +148,7 @@ func info(args []string) error {
 }
 
 func runOnce(args []string) error {
-	flags := flag.NewFlagSet("run", flag.ContinueOnError)
+	flags := flag.NewFlagSet("garden run", flag.ContinueOnError)
 	root := flags.String("root", ".", "project root")
 	message := flags.String("message", "", "message to send")
 	sessionID := flags.String("session", "", "existing session id")
@@ -214,7 +245,7 @@ type serveOptions struct {
 }
 
 func parseServeOptions(args []string) (serveOptions, error) {
-	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
+	flags := flag.NewFlagSet("garden serve", flag.ContinueOnError)
 	root := flags.String("root", ".", "project root")
 	addr := flags.String("addr", "127.0.0.1:3000", "listen address")
 	runtimeName := flags.String("runtime", "native", "runtime implementation: native or eve")
@@ -246,7 +277,7 @@ func serveOfficialEve(options serveOptions) error {
 }
 
 func eval(args []string) error {
-	flags := flag.NewFlagSet("eval", flag.ContinueOnError)
+	flags := flag.NewFlagSet("garden eval", flag.ContinueOnError)
 	root := flags.String("root", ".", "project root")
 	list := flags.Bool("list", false, "list discovered evals")
 	if err := flags.Parse(args); err != nil {
@@ -264,7 +295,7 @@ func eval(args []string) error {
 }
 
 func commonFlags(name string, args []string, withAddr bool) (string, string, error) {
-	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags := flag.NewFlagSet("garden "+name, flag.ContinueOnError)
 	root := flags.String("root", ".", "project root")
 	addr := flags.String("addr", "127.0.0.1:3000", "listen address")
 	if !withAddr {
