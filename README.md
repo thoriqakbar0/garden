@@ -67,6 +67,29 @@ cd garden
 make build
 ```
 
+This command creates `./garden`. Install `garden` in your user `PATH` when you
+want to run it from any directory:
+
+```sh
+make install
+command -v garden
+garden version
+```
+
+If `command -v` returns no path, add the default directory to your shell
+`PATH`:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+`make install` writes `$HOME/.local/bin/garden`. Set `BINDIR` to select another
+directory:
+
+```sh
+make install BINDIR="$HOME/bin"
+```
+
 Inspect the included Eve weather agent:
 
 ```sh
