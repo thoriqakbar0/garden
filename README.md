@@ -77,7 +77,6 @@ Run it with credentials created by the Codex CLI:
 
 ```sh
 codex login
-export GARDEN_MODEL_BACKEND=codex
 ./garden run \
   --root examples/eve-weather \
   --message "What is the weather in Jakarta?"
@@ -98,8 +97,9 @@ Continue the same local conversation with `--session`:
   --message "And tomorrow?"
 ```
 
-Normal `run` and `serve` commands require a configured model backend. They do
-not silently return a diagnostic echo.
+When `GARDEN_MODEL_BACKEND` is empty, Garden selects Codex if `codex` is on
+`PATH`. Normal `run` and `serve` commands fail if Garden cannot detect or use a
+model backend. They do not silently return a diagnostic echo.
 
 Next, choose the relevant path:
 
@@ -153,7 +153,7 @@ or a trusted reverse proxy provides the intended external authorization.
 
 | Variable | Meaning |
 | --- | --- |
-| `GARDEN_MODEL_BACKEND` | Required: `openai` or `codex`. |
+| `GARDEN_MODEL_BACKEND` | Optional explicit selection: `openai` or `codex`. When empty, Garden selects Codex if `codex` is on `PATH`. |
 | `GARDEN_MODEL` | Optional model override. When unset, `openai` uses the literal model discovered in `agent/agent.ts`; `codex` defaults to `gpt-5.6-sol`. |
 | `GARDEN_CODEX_SANDBOX` | Optional Codex terminal policy: `workspace-write` (default) or `read-only`. Garden rejects `danger-full-access`. |
 | `GARDEN_OPENAI_BASE_URL` | OpenAI-compatible API base. Defaults to `https://api.openai.com/v1` when an API key is set. |
@@ -161,12 +161,13 @@ or a trusted reverse proxy provides the intended external authorization.
 | `CODEX_HOME` | Codex state directory, default `~/.codex`. |
 | `GARDEN_AUTH_TOKEN` | Required bearer token when `serve` binds beyond loopback. |
 
-The `codex` backend delegates each Eve turn to `codex exec --json`. Codex can
-inspect the project and use its terminal tools. Garden sets a ten-minute turn
-deadline, disables interactive approvals, strips the parent shell environment
-down to Codex's core command environment, blocks login-shell rehydration, and
-confines writes to the project root. A command that needs network or access
-outside the sandbox fails instead of waiting for approval.
+The `codex` backend delegates each Eve turn to `codex exec --json`. Garden uses
+this backend automatically when no backend is set and the Codex CLI is on
+`PATH`. Codex can inspect the project and use its terminal tools. Garden sets a
+ten-minute turn deadline, disables interactive approvals, strips the parent
+shell environment down to Codex's core command environment, blocks login-shell
+rehydration, and confines writes to the project root. A command that needs
+network or access outside the sandbox fails instead of waiting for approval.
 
 Use read-only terminal access when the agent should inspect but never edit:
 

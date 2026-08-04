@@ -64,6 +64,14 @@ func codexExecRunnerFromConfig(
 	if err != nil {
 		return nil, errors.New("codex backend requires the Codex CLI on PATH; install it and run `codex login`")
 	}
+	return codexExecRunnerFromCommand(app, getenv, command)
+}
+
+func codexExecRunnerFromCommand(
+	app discover.Application,
+	getenv func(string) string,
+	command string,
+) (*codexExecRunner, error) {
 	root, err := filepath.Abs(app.Root)
 	if err != nil {
 		return nil, errors.New("resolve agent project root")

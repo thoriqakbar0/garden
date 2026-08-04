@@ -76,9 +76,14 @@ live meteorological data.
 
 ## Codex execution boundary
 
-With `GARDEN_MODEL_BACKEND=codex`, Garden delegates the complete turn to the
-local Codex CLI instead of exposing Garden's native manifest to a raw model
-endpoint. Codex MAY use terminal tools within the agent project. Garden MUST:
+Garden delegates the complete turn to the local Codex CLI when either condition
+is true:
+
+- `GARDEN_MODEL_BACKEND=codex`; or
+- `GARDEN_MODEL_BACKEND` is empty and `codex` is on `PATH`.
+
+An explicit backend selection MUST take precedence over automatic detection.
+Codex MAY use terminal tools within the agent project. Garden MUST:
 
 - consume `codex exec --json` events without parsing human output;
 - run non-interactively with either `read-only` or `workspace-write` sandboxing;
