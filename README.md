@@ -410,6 +410,11 @@ target is not counted as differential proof.
 
 ## Scope
 
-Garden is an independent Apache-2.0 implementation and is not a Vercel product.
+Garden is an independent Apache-2.0 implementation. It is not affiliated with
+or endorsed by Vercel or the Eve project. It was built out of love for Eve’s
+open-source SDKs.
+
 Official Eve defines the authored project shape and observable HTTP behavior;
-Garden owns the local execution, persistence, and serving implementation.
+Garden owns the local execution, persistence, and serving implementation. See
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for Eve attribution and
+license details.

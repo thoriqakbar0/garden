@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Next.js landing page in `website/`, selected by the user. Garden itself remains a Go CLI.
+React landing page using Vite and TanStack Router in `website/`, selected by the user. Garden itself remains a Go CLI.
 
 ## Users
 

@@ -1,6 +1,6 @@
 # Garden website
 
-The public landing page for Garden. It is a standalone Next.js application; the
+The public landing page for Garden. It is a standalone React application built with Vite and TanStack Router; the
 Garden CLI remains the Go project at the repository root.
 
 ## Develop

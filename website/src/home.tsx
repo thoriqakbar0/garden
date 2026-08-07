@@ -1,6 +1,50 @@
+import { useEffect, useState } from "react";
+
+import { BotanicalArt, SpecimenVine } from "./botanical-art";
 import { CopyCommand } from "./copy-command";
+import { DitheredField } from "./dithered-field";
 
 const githubUrl = "https://github.com/thoriqakbar0/garden";
+
+/* ─────────────────────────────────────────────────────────
+ * HERO ANIMATION STORYBOARD
+ *
+ * Read top-to-bottom. Each value is ms after mount.
+ *
+ *    0ms  hero waits in its composed layout
+ *  100ms  headline and supporting copy settle into view
+ *  180ms  runtime specimen settles into view
+ * ───────────────────────────────────────────────────────── */
+
+const TIMING = {
+  heroCopy: 100,
+  runtimeSpecimen: 180,
+} as const;
+
+const finalHeroStage = 2;
+
+function revealClassName(baseClassName: string, isRevealed: boolean): string {
+  return isRevealed ? `${baseClassName} is-revealed` : baseClassName;
+}
+
+function useHeroStage(): number {
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [stage, setStage] = useState(prefersReducedMotion ? finalHeroStage : 0);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      return;
+    }
+
+    const timers = Object.values(TIMING).map((delay, index) =>
+      window.setTimeout(() => setStage(index + 1), delay),
+    );
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [prefersReducedMotion]);
+
+  return stage;
+}
 
 function GardenMark() {
   return (
@@ -29,7 +73,9 @@ function ExternalIcon() {
 }
 
 /** Renders Garden’s primary marketing page. */
-export default function Home() {
+export function Home() {
+  const heroStage = useHeroStage();
+
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -57,13 +103,26 @@ export default function Home() {
 
       <main id="main-content">
         <section className="hero" id="top">
+          <DitheredField />
+          <BotanicalArt variant="sprout" />
           <div className="hero-shell">
-            <div className="hero-copy">
-              <h1>Run Eve agents.<br /><span>Keep the runtime yours.</span></h1>
+            <div className={revealClassName("hero-copy", heroStage >= 1)}>
+              <h1>
+                <span className="hero-line hero-line-lead">
+                  Run{" "}
+                  <span className="hero-eve-lockup">
+                    <a href="https://github.com/vercel/eve" target="_blank" rel="noreferrer">
+                      Eve by Vercel <span aria-hidden="true">↗</span>
+                    </a>
+                    <span>Eve.</span>
+                  </span>
+                </span>
+                <span className="hero-line hero-line-promise">Own the runtime.</span>
+              </h1>
               <p className="hero-description">
-                Garden runs an unmodified Eve project through the official runtime,
-                or gives you a focused native Go path. Local by default. Explicit
-                about the difference.
+                Garden runs your project with the official Eve runtime or its
+                smaller native Go runtime. Both run locally. Garden always shows
+                which runtime is active.
               </p>
 
               <div className="hero-actions">
@@ -82,7 +141,8 @@ export default function Home() {
               </dl>
             </div>
 
-            <div className="runtime-specimen" aria-label="One Eve project branching into official and native execution paths">
+            <div className={revealClassName("runtime-specimen", heroStage >= 2)} aria-label="One Eve project branching into official and native execution paths">
+              <SpecimenVine />
               <div className="specimen-header">
                 <span>agent/weather</span>
                 <span className="healthy"><i /> discovered</span>
@@ -125,26 +185,26 @@ export default function Home() {
         </section>
 
         <section className="runtime-section" id="runtime">
+          <BotanicalArt variant="branches" />
           <div className="section-shell">
             <div className="section-intro">
-              <h2>Two honest paths through the same project.</h2>
+              <h2>One project. Two paths.</h2>
               <p>
-                Choose fidelity when authored Eve behavior matters. Choose the
-                smaller native contract when a local Go runtime is the point.
-                Garden never quietly swaps one for the other.
+                Choose official Eve for full authored behavior. Choose Garden
+                native for a smaller Go contract. No silent switch.
               </p>
             </div>
 
             <div className="runtime-landscape">
               <article className="mode mode-official">
-                <h3>Your Eve project, still itself.</h3>
+                <h3>Eve stays Eve.</h3>
                 <div className="mode-topline">
                   <span>Official mode</span><code>eve@0.27.6</code>
                 </div>
                 <p>
-                  Garden supervises the pinned project-local runtime. Eve owns
-                  compilation, tools, hooks, channels, subagents, schedules,
-                  workflow semantics, and its sandbox.
+                  Garden supervises the pinned runtime. Eve keeps compilation,
+                  tools, hooks, channels, subagents, schedules, workflows, and
+                  sandboxing.
                 </p>
                 <div className="mode-command"><code>garden serve --runtime eve</code></div>
                 <ul aria-label="Official Eve mode characteristics">
@@ -159,14 +219,14 @@ export default function Home() {
               </div>
 
               <article className="mode mode-native">
-                <h3>A smaller contract, deliberately.</h3>
+                <h3>Less surface. On purpose.</h3>
                 <div className="mode-topline">
                   <span>Native mode</span><code>garden</code>
                 </div>
                 <p>
-                  Sessions, live streams, model and native-tool turns,
-                  cancellation, and local recovery live in one Go process. No
-                  arbitrary authored TypeScript is implied.
+                  One Go process owns sessions, streams, model and native-tool
+                  turns, cancellation, and recovery. It does not run arbitrary
+                  authored TypeScript.
                 </p>
                 <div className="mode-command"><code>garden serve</code></div>
                 <ul aria-label="Native Garden mode characteristics">
@@ -180,13 +240,14 @@ export default function Home() {
         </section>
 
         <section className="protocol-section" id="protocol">
+          <BotanicalArt variant="seedPods" />
           <div className="protocol-shell">
             <div className="protocol-copy">
-              <h2>The boundary is a live protocol, not a black box.</h2>
+              <h2>Watch the boundary.</h2>
               <p>
-                Garden’s native server exposes Eve-shaped HTTP sessions and
-                protocol-v19 event streams. Continuations, replay, cancellation,
-                and recovery remain inspectable from the client side.
+                Garden exposes Eve-shaped HTTP sessions and protocol-v19 event
+                streams. Inspect continuations, replay, cancellation, and recovery
+                from the client.
               </p>
               <a href="https://github.com/thoriqakbar0/garden/blob/main/TESTING.md" target="_blank" rel="noreferrer">
                 Inspect the test inventory <ArrowIcon />
@@ -211,35 +272,37 @@ export default function Home() {
         </section>
 
         <section className="principles-section" aria-labelledby="principles-title">
+          <BotanicalArt variant="leafCluster" />
           <div className="section-shell principles-shell">
-            <h2 id="principles-title">Built to stay legible when the agent does real work.</h2>
+            <h2 id="principles-title">Real work. Clear evidence.</h2>
             <div className="principle-list">
               <article>
                 <span className="principle-mark" aria-hidden="true" />
                 <h3>Own the process</h3>
-                <p>Loopback by default, bearer-protected beyond it, and no hosted Garden service between you and the runtime.</p>
+                <p>Loopback by default. Bearer-protected beyond it. No hosted Garden service in the middle.</p>
               </article>
               <article>
                 <span className="principle-mark" aria-hidden="true" />
                 <h3>Keep the evidence</h3>
-                <p>Durable local events, deterministic recovery, and executable compatibility tests replace hand-wavy parity claims.</p>
+                <p>Durable events. Deterministic recovery. Executable compatibility tests.</p>
               </article>
               <article>
                 <span className="principle-mark" aria-hidden="true" />
                 <h3>Name the boundary</h3>
-                <p>Official means delegated to Eve. Native means the supported Go contract. The interface tells you which one is running.</p>
+                <p>Official delegates to Eve. Native runs the supported Go contract. You always know which path is live.</p>
               </article>
             </div>
           </div>
         </section>
 
         <section className="install-section" id="install">
+          <BotanicalArt variant="roots" />
           <div className="install-shell">
             <div className="install-copy">
-              <h2>Plant it in your own environment.</h2>
+              <h2>Your machine. Your runtime.</h2>
               <p>
-                Build Garden from source, install the binary, then point it at an
-                Eve-shaped project. Nothing to sign up for.
+                Build Garden. Install the binary. Point it at an Eve-shaped
+                project. No signup.
               </p>
               <div className="requirement-row">
                 <span>macOS or Linux</span>
@@ -259,9 +322,10 @@ export default function Home() {
         </section>
 
         <section className="closing-section">
+          <BotanicalArt variant="bloom" />
           <div className="closing-shell">
             <div className="closing-mark" aria-hidden="true"><GardenMark /></div>
-            <h2>Let Eve stay Eve.<br />Choose where Garden begins.</h2>
+            <h2>Eve stays Eve.<br />Garden starts where you choose.</h2>
             <div className="closing-actions">
               <a className="button button-primary" href={githubUrl} target="_blank" rel="noreferrer">
                 View Garden on GitHub <ExternalIcon />
@@ -280,10 +344,13 @@ export default function Home() {
             <span className="brand-mark"><GardenMark /></span>
             <span>garden</span>
           </a>
-          <p>Local runtime infrastructure for Eve-shaped agents.</p>
+          <p className="footer-attribution">
+            <span>Independent from Vercel and the Eve project.</span>
+            <span>Built out of love for Eve’s open-source SDKs. 💚</span>
+          </p>
           <div>
             <a href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">Compatibility</a>
-            <a href="https://github.com/thoriqakbar0/garden/blob/main/UPSTREAM.md" target="_blank" rel="noreferrer">Upstream</a>
+            <a href="https://github.com/thoriqakbar0/garden/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">Licenses</a>
             <a href={githubUrl} target="_blank" rel="noreferrer">Source</a>
           </div>
         </div>

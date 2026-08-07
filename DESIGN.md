@@ -87,14 +87,15 @@ components:
 
 **Creative North Star: "Cultivated systems"**
 
-Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching without turning the product into a decorative garden theme. Botanical geometry is structural: stems, nodes, leaves, and paired branches explain how one Eve-shaped project reaches two explicitly different runtimes.
+Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Botanical imagery is meaning-bearing: each major section receives one illustration whose form mirrors its job, from the hero sprout and branching runtimes to protocol seed pods, install roots, and the closing bloom.
 
-The composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.
+The composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Behind both, licensed wheat-field footage moves through a Garden-colored ordered-dither shader, turning the product metaphor into a living field without reducing text contrast. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.
 
 **Key Characteristics:**
 - Warm field-note parchment with deep forest ink
 - Acid-leaf signals reserved for status, action, and branching
 - Botanical forms used as information geometry
+- Dithered wheat-field motion with a static reduced-motion fallback
 - Asymmetric editorial layouts paired with precise runtime specimens
 - Clear visual separation between official Eve ownership and Garden native ownership
 
@@ -183,10 +184,15 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Style:** The brand combines a Bricolage Grotesque wordmark with a seed-shaped forest mark. Links are compact, semibold Manrope in soft ink and become forest on hover. The GitHub link remains forest and includes an external-link glyph.
 - **Mobile:** Section links hide at 48rem while GitHub remains. Below 31rem its word label hides and the icon retains the control.
 
+### Dithered Field
+- **Style:** Locally hosted wheat footage is sampled frame by frame through a forest, leaf, and paper ordered-dither shader. A left-to-right paper mask protects headline contrast.
+- **Lifecycle:** Rendering follows `requestVideoFrameCallback`, pauses outside the hero, owns WebGL cleanup, and falls back to a dithered poster frame when motion is reduced or playback is unavailable.
+- **Attribution:** The adapted CC BY 3.0 footage and changes are documented in `THIRD_PARTY_NOTICES.md`.
+
 ### Runtime Branch Specimen
-- **Style:** A bright-paper raised container shows one recessed Eve-shaped source bed, a moss stem, and two runtime branches.
+- **Style:** A bright-paper raised container shows one recessed Eve-shaped source bed, a moss stem, two runtime branches, and a quiet vine following its outside border.
 - **Ownership:** The official branch is forest with bright text; the native branch is soft acid leaf with ink text. Their labels and commands stay explicit.
-- **Motion:** When reduced motion is not requested, the central stem grows before the horizontal branch spreads. The command cursor blinks independently.
+- **Motion:** Hero content enters in two restrained grouped settles. The command cursor blinks independently. Section illustrations use CSS view timelines to draw stems and unfurl leaves as their sections move through the viewport; reduced-motion users receive the complete static artwork.
 
 ### Event Stream
 - **Style:** A deep-forest ordered list uses mono event names, tabular sequence numbers, quiet row separators, and a bright live-status dot.
@@ -203,11 +209,12 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Do** reserve acid leaf for status, action, active evidence, and botanical connectors.
 - **Do** make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.
 - **Do** use stems, nodes, and leaf marks to explain relationships and runtime branching.
+- **Do** give every major section one botanical composition whose form reflects that section’s meaning.
 - **Do** preserve visible focus, reduced-motion behavior, and the documented 320px reflow.
 
 ### Don't:
 - **Don't** center the first viewport into a generic SaaS hero or replace the runtime specimen with a feature-card grid.
-- **Don't** use decorative garden imagery when botanical geometry can carry system meaning.
+- **Don't** add botanical imagery without a section-specific role or let it obscure product content.
 - **Don't** style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.
 - **Don't** use acid leaf as a broad background or routine body-text color.
 - **Don't** fabricate hosted-service, deployment, benchmark, customer, or compatibility claims.
