@@ -1,18 +1,34 @@
-# Garden
+<div align="center">
+  <h1>Garden</h1>
+  <p><strong>Self-host Eve agents on infrastructure you control.</strong></p>
+  <p>
+    <a href="https://vercel.com/eve">Eve</a> is Vercel’s filesystem-first framework for durable AI agents.
+    Garden is an independent runtime bridge for running Eve-shaped projects locally.
+  </p>
+  <p>
+    <a href="https://garden.ta-0.com">Website</a> ·
+    <a href="#quickstart">Quickstart</a> ·
+    <a href="COMPATIBILITY.md">Compatibility</a>
+  </p>
+  <p>
+    <img alt="Go 1.25+" src="https://img.shields.io/badge/Go-1.25%2B-00ADD8?logo=go&logoColor=white">
+    <img alt="Eve 0.27.6" src="https://img.shields.io/badge/Eve-0.27.6-000000">
+    <img alt="Apache 2.0" src="https://img.shields.io/badge/License-Apache%202.0-2f6f3e">
+  </p>
+</div>
 
-**Website:** [garden.ta-0.com](https://garden.ta-0.com)
+Garden gives you two explicit runtime paths:
 
-Garden runs [Eve](https://github.com/vercel/eve) agents locally in two explicit
-modes. `--runtime eve` supervises the pinned project-local official Eve runtime,
-so an unmodified Eve agent keeps its authored TypeScript, tools, hooks, channels,
-connections, subagents, schedules, workflow semantics, and sandboxed terminal.
-The default native mode is a standalone Go runtime for a smaller Eve-shaped
-conversation contract, with either the local Codex CLI or an OpenAI-compatible
-model endpoint.
+- **Official Eve runtime:** `--runtime eve` supervises the pinned project-local
+  `eve@0.27.6`. Eve continues to own authored TypeScript, tools, hooks, channels,
+  connections, subagents, schedules, workflow semantics, and sandboxing.
+- **Garden native runtime:** the default mode runs a smaller supported
+  Eve-shaped contract as one Go process, using either the local Codex CLI or an
+  OpenAI-compatible model endpoint.
 
-Neither mode requires a hosted Garden service. Official Eve mode requires Node
-24 and the pinned `eve` npm dependency in the agent project. Native mode remains
-a single Go process with local workflow storage and no JavaScript runtime.
+Both paths run locally and require no hosted Garden service. Official mode needs
+Node 24 and the pinned Eve package; native mode needs no JavaScript runtime and
+stores its workflow state locally.
 
 > [!WARNING]
 > Garden is still work in progress. Full authored Eve behavior is available
