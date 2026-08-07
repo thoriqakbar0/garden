@@ -12,6 +12,7 @@ type openAIModel struct {
 	client   *http.Client
 	endpoint string
 	apiKey   string
+	headers  map[string]string
 }
 
 type chatMessage struct {
@@ -38,7 +39,7 @@ func (m *openAIModel) Complete(ctx context.Context, request modelRequest) (messa
 	messages = append(messages, chatMessage{Role: "system", Content: &instructions})
 	for _, item := range request.Messages {
 		converted := chatMessage{Role: item.Role, ToolCallID: item.ToolCallID}
-		if item.Content != "" {
+		if item.Content != "" || (item.Role == "assistant" && len(item.ToolCalls) > 0) {
 			content := item.Content
 			converted.Content = &content
 		}
@@ -74,7 +75,7 @@ func (m *openAIModel) Complete(ctx context.Context, request modelRequest) (messa
 		payload["tools"] = tools
 		payload["tool_choice"] = "auto"
 	}
-	data, _, status, err := postJSON(ctx, m.client, m.endpoint, m.apiKey, nil, payload)
+	data, _, status, err := postJSON(ctx, m.client, m.endpoint, m.apiKey, m.headers, payload)
 	if err != nil {
 		return message{}, err
 	}
@@ -104,11 +105,33 @@ func (m *openAIModel) Complete(ctx context.Context, request modelRequest) (messa
 		if call.Type != "function" {
 			return message{}, errors.New("model returned an unsupported tool-call type")
 		}
+		arguments, err := normalizeToolArguments(call.Function.Arguments)
+		if err != nil {
+			return message{}, err
+		}
 		result.ToolCalls = append(result.ToolCalls, toolCall{
 			ID:        call.ID,
 			Name:      call.Function.Name,
-			Arguments: json.RawMessage(call.Function.Arguments),
+			Arguments: arguments,
 		})
 	}
 	return result, nil
+}
+
+func normalizeToolArguments(arguments string) (json.RawMessage, error) {
+	raw := json.RawMessage(arguments)
+	for range 2 {
+		if !json.Valid(raw) {
+			return nil, errors.New("model returned malformed tool arguments")
+		}
+		var nested string
+		if err := json.Unmarshal(raw, &nested); err != nil {
+			return raw, nil
+		}
+		raw = json.RawMessage(nested)
+	}
+	if !json.Valid(raw) {
+		return nil, errors.New("model returned malformed tool arguments")
+	}
+	return raw, nil
 }

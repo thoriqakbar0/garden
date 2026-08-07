@@ -79,7 +79,7 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 	secondMessages := requests[1]["messages"].([]any)
 	assistant := secondMessages[len(secondMessages)-2].(map[string]any)
 	toolResult := secondMessages[len(secondMessages)-1].(map[string]any)
-	if assistant["role"] != "assistant" || toolResult["role"] != "tool" ||
+	if assistant["role"] != "assistant" || assistant["content"] != "" || toolResult["role"] != "tool" ||
 		toolResult["tool_call_id"] != "weather-1" ||
 		!strings.Contains(toolResult["content"].(string), `"city":"Jakarta"`) {
 		t.Fatalf("uncorrelated second request: %#v", secondMessages)
@@ -214,6 +214,45 @@ func TestRejectsMalformedAndDuplicateToolCalls(t *testing.T) {
 				t.Fatalf("error = %v, want %q", err, test.match)
 			}
 		})
+	}
+}
+
+func TestOpenAIToolArgumentsAcceptProviderDoubleEncoding(t *testing.T) {
+	arguments, err := normalizeToolArguments(`"{\"city\":\"Jakarta\"}"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(arguments) != `{"city":"Jakarta"}` {
+		t.Fatalf("arguments = %s", arguments)
+	}
+}
+
+func TestCloudflareGatewayTokenHeader(t *testing.T) {
+	const gatewayToken = "gateway-token"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("cf-aig-authorization"); got != "Bearer "+gatewayToken {
+			t.Errorf("cf-aig-authorization = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"ok"}}]}`)
+	}))
+	defer server.Close()
+
+	app := discover.Application{Instructions: "test", Model: "model"}
+	responder, err := responderFromConfig(app, env(map[string]string{
+		"GARDEN_MODEL_BACKEND":            "openai",
+		"GARDEN_OPENAI_BASE_URL":          server.URL,
+		"GARDEN_CLOUDFLARE_GATEWAY_TOKEN": gatewayToken,
+	}), server.Client(), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := send(t, responder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Message != "ok" {
+		t.Fatalf("result = %q", result.Message)
 	}
 }
 

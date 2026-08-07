@@ -29,7 +29,8 @@ shape. Configuration is explicit:
 | Variable | Meaning |
 | --- | --- |
 | `GARDEN_OPENAI_BASE_URL` | Compatible API base URL |
-| `GARDEN_OPENAI_API_KEY` | Optional bearer credential |
+| `GARDEN_OPENAI_API_KEY` | Optional upstream bearer credential |
+| `GARDEN_CLOUDFLARE_GATEWAY_TOKEN` | Optional Cloudflare AI Gateway credential for `cf-aig-authorization` |
 | `GARDEN_MODEL` | Model override for endpoints that do not use the authored identifier |
 
 If only the API key is set, Garden MAY default the base URL to the OpenAI API.
