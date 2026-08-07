@@ -1,9 +1,9 @@
 <div align="center">
   <h1>Garden</h1>
-  <p><strong>Self-host Eve agents on infrastructure you control.</strong></p>
+  <p><strong>An independent, self-hosted Go runtime for Eve-compatible agents.</strong></p>
   <p>
-    <a href="https://vercel.com/eve">Eve</a> is Vercel’s filesystem-first framework for durable AI agents.
-    Garden is an independent runtime bridge for running Eve-shaped projects locally.
+    <a href="https://vercel.com/eve">Eve</a> is Vercel’s filesystem-first framework and runtime for durable AI agents.
+    Garden is a separate implementation for running a supported Eve-compatible subset on infrastructure you control.
   </p>
   <p>
     <a href="https://garden.ta-0.com">Website</a> ·
@@ -17,38 +17,39 @@
   </p>
 </div>
 
-Garden gives you two explicit runtime paths:
+Choose the implementation that matches the project:
 
-- **Official Eve runtime:** `--runtime eve` supervises the pinned project-local
-  `eve@0.27.6`. Eve continues to own authored TypeScript, tools, hooks, channels,
-  connections, subagents, schedules, workflow semantics, and sandboxing.
-- **Garden native runtime:** the default mode runs a smaller supported
-  Eve-shaped contract as one Go process, using either the local Codex CLI or an
-  OpenAI-compatible model endpoint.
+- **Eve by Vercel:** use Eve for its complete authored TypeScript feature set,
+  including tools, hooks, channels, connections, subagents, schedules, workflow
+  semantics, and sandboxing.
+- **Garden:** use the self-hosted Go alternative for the smaller compatible
+  contract documented here. Garden runs as one process with local workflow
+  storage and either the Codex CLI or an OpenAI-compatible model endpoint.
 
-Both paths run locally and require no hosted Garden service. Official mode needs
-Node 24 and the pinned Eve package; native mode needs no JavaScript runtime and
-stores its workflow state locally.
+Garden can also launch a pinned project-local copy of Eve with `--runtime eve`.
+That path is still Eve: Garden only validates and supervises the process. It is
+not a second Garden implementation.
 
 > [!WARNING]
-> Garden is still work in progress. Full authored Eve behavior is available
-> only through explicit official Eve mode. Native mode implements sessions,
-> streaming, model and native-tool turns, the Codex terminal, cancellation, and
-> local recovery; it does not execute arbitrary authored TypeScript.
+> Garden is still work in progress. For the full authored feature set, run Eve
+> itself, optionally supervised by Garden with `--runtime eve`. Garden currently
+> implements sessions, streaming, model and native-tool turns, the Codex
+> terminal, cancellation, and local recovery; it does not execute arbitrary
+> authored TypeScript.
 
 ## Compatibility
 
 See the complete [Eve feature matrix](COMPATIBILITY.md) and [test inventory](TESTING.md).
 Compatibility is pinned to the Eve revision in [`UPSTREAM.md`](UPSTREAM.md).
-Official Eve mode is 1:1 by process ownership: the pinned official runtime
-compiles and executes the project itself. Native mode has the narrower contract
-described below and does not claim complete Eve parity.
+When Garden launches Eve with `--runtime eve`, compatibility is 1:1 by process
+ownership: Eve compiles and executes the project itself. Garden implements the
+narrower contract described below and does not claim complete Eve parity.
 
 | Capability | Status | Garden behavior |
 | --- | --- | --- |
-| Official Eve runtime | Available | `serve --runtime eve` runs project-local `eve@0.27.6`; official Eve owns authored semantics and wire behavior. |
-| Authored TypeScript | Official Eve mode | Tools, hooks, channels, connections, subagents, schedules, sandboxes, and other supported Eve modules execute unchanged. |
-| Sandboxed terminal | Official Eve mode | Eve's built-in terminal tools use the agent's authored or default Eve sandbox backend and session-scoped `/workspace`. |
+| Eve by Vercel | Available through `--runtime eve` | Garden runs project-local `eve@0.27.6`; Eve owns authored semantics and wire behavior. |
+| Authored TypeScript | Eve | Tools, hooks, channels, connections, subagents, schedules, sandboxes, and other supported Eve modules execute unchanged. |
+| Sandboxed terminal | Eve | Eve's built-in terminal tools use the agent's authored or default Eve sandbox backend and session-scoped `/workspace`. |
 | Eve project discovery | Available | Discovers instructions, model, tools, skills, channels, connections, subagents, schedules, and evals. |
 | Model execution | Available | Sandboxed Codex CLI execution and OpenAI Chat Completions-compatible endpoints. |
 | Native tool loop | Available | Model -> tool -> model with bounded requests, deadlines, cancellation, and durable Eve events. |
@@ -74,7 +75,7 @@ For native mode you need:
 - macOS or Linux; and
 - either a Codex login or an OpenAI-compatible model endpoint.
 
-Official Eve mode instead needs Node 24 or newer and project-local
+Running Eve through Garden instead needs Node 24 or newer and project-local
 `eve@0.27.6`.
 
 The local runtime allows one Garden writer per workflow store and fails closed
@@ -145,16 +146,16 @@ model backend. They do not silently return a diagnostic echo.
 
 Next, choose the relevant path:
 
-- [run an unmodified Eve agent](#official-eve-mode);
+- [run Eve through Garden](#run-eve-through-garden);
 - [configure another model backend](#model-configuration);
 - [serve the Eve-compatible HTTP API](#http-runtime); or
 - [adapt an Eve-shaped project](#supported-project-shape).
 
-## Official Eve mode
+## Run Eve through Garden
 
-Use this mode when the goal is to run an Eve agent 1:1 rather than port its
-behavior into Garden's native Go subset. In the Eve project, pin and install the
-baseline package:
+Use this compatibility bridge when the goal is to run Eve itself rather than
+port its behavior into Garden's native Go subset. In the Eve project, pin and
+install the baseline package:
 
 ```json
 {
@@ -176,8 +177,8 @@ npm install
 
 Garden validates the exact package version and project-local executable, then
 runs `eve dev --no-ui` and owns its signal and shutdown lifecycle. Garden does
-not translate the agent or intercept its protocol: the official runtime owns
-compilation, model calls, durable sessions, routes, authorization, and sandbox
+not translate the agent or intercept its protocol: Eve owns compilation, model
+calls, durable sessions, routes, authorization, and sandbox
 selection. The process receives the Eve project's environment because authored
 tools and connections may require it.
 
@@ -191,9 +192,9 @@ the sandbox backend in the Eve project; the framework default may select Docker,
 microsandbox, or the pure-JavaScript `just-bash` fallback depending on the host.
 
 `GARDEN_MODEL_BACKEND=codex` belongs to native mode and is not injected into the
-official Eve runtime. Likewise, Garden's native bearer wrapper does not wrap
-official Eve routes. Keep the official host on loopback unless the Eve project
-or a trusted reverse proxy provides the intended external authorization.
+Eve process. Likewise, Garden's native bearer wrapper does not wrap Eve routes.
+Keep Eve on loopback unless the project or a trusted reverse proxy provides the
+intended external authorization.
 
 ## Model configuration
 
@@ -412,7 +413,7 @@ make list-tests
 
 `make test-official` installs the pinned, credential-free
 [`examples/eve-parity`](examples/eve-parity) fixture and proves authored
-TypeScript plus sandbox execution through the official runtime. See
+TypeScript plus sandbox execution through Eve. See
 [`TESTING.md`](TESTING.md) for every test, validation tier, live-provider smoke
 command, and remaining evidence gap.
 
@@ -421,7 +422,7 @@ Codex execution, the native tool loop, protocol-v19 create/continue/stream/cance
 live flushing, cursor resume, continuation ownership, cancellation races,
 session traversal rejection, concurrent sessions, and restart repair.
 
-The same black-box contract can target pinned official Eve fixtures with
+The same black-box contract can target pinned Eve fixtures with
 `EVE_OFFICIAL_BASE_URL` and `EVE_OFFICIAL_CANCELLATION_BASE_URL`; see
 [`official_test.go`](internal/contracttest/official_test.go). A skipped official
 target is not counted as differential proof.
@@ -432,7 +433,8 @@ Garden is an independent Apache-2.0 implementation. It is not affiliated with
 or endorsed by Vercel or the Eve project. It was built out of love for Eve’s
 open-source SDKs.
 
-Official Eve defines the authored project shape and observable HTTP behavior;
-Garden owns the local execution, persistence, and serving implementation. See
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for Eve attribution and
+Eve defines the complete authored project shape and observable HTTP behavior;
+Garden implements the documented compatible subset in Go. When Garden launches
+Eve with `--runtime eve`, Eve—not Garden—owns execution, persistence, and serving.
+See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for Eve attribution and
 license details.
