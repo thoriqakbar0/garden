@@ -9,19 +9,15 @@ const githubUrl = "https://github.com/thoriqakbar0/garden";
 /* ─────────────────────────────────────────────────────────
  * HERO ANIMATION STORYBOARD
  *
- * Read top-to-bottom. Each value is ms after mount.
- *
  *    0ms  hero waits in its composed layout
  *  100ms  headline and supporting copy settle into view
- *  180ms  runtime specimen settles into view
  * ───────────────────────────────────────────────────────── */
 
 const TIMING = {
   heroCopy: 100,
-  runtimeSpecimen: 180,
 } as const;
 
-const finalHeroStage = 2;
+const finalHeroStage = 1;
 
 function revealClassName(baseClassName: string, isRevealed: boolean): string {
   return isRevealed ? `${baseClassName} is-revealed` : baseClassName;
@@ -167,46 +163,6 @@ export function Home() {
               </dl>
             </div>
 
-            <figure className={revealClassName("runtime-specimen", heroStage >= 2)}>
-              <figcaption className="sr-only">One Eve project branching into the official Eve runtime and Garden native runtime</figcaption>
-              <div className="specimen-header">
-                <span>agent/weather</span>
-                <span className="healthy"><i /> discovered</span>
-              </div>
-
-              <div className="source-bed">
-                <span className="folder-tab">Eve-shaped project</span>
-                <code>agent/</code>
-                <ul>
-                  <li>instructions.md</li>
-                  <li>agent.ts</li>
-                  <li>tools/get_weather.ts</li>
-                </ul>
-              </div>
-
-              <div className="stem" aria-hidden="true"><i /><i /><i /></div>
-
-              <div className="runtime-branches">
-                <div className="branch branch-official">
-                  <span className="branch-label">Full Eve feature set</span>
-                  <strong>Official Eve runtime</strong>
-                  <code>--runtime eve</code>
-                  <small>TypeScript stays TypeScript</small>
-                </div>
-                <div className="branch branch-native">
-                  <span className="branch-label">Smaller local feature set</span>
-                  <strong>Garden native runtime</strong>
-                  <code>default</code>
-                  <small>One durable Go process</small>
-                </div>
-              </div>
-
-              <div className="specimen-command">
-                <span aria-hidden="true">$</span>
-                <code>garden serve --runtime eve</code>
-                <span className="cursor" aria-hidden="true" />
-              </div>
-            </figure>
           </div>
         </section>
 

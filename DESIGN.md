@@ -89,14 +89,14 @@ components:
 
 Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Natural footage carries the botanical atmosphere; CSS stems, nodes, and leaf marks explain runtime relationships without relying on disconnected decorative SVG illustrations.
 
-The composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Behind both, licensed wheat-field footage moves through a Garden-colored ordered-dither shader, turning the product metaphor into a living field without reducing text contrast. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.
+The composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise sits directly in a living wheat field with generous open space for the footage. Licensed wheat-field footage moves through a Garden-colored ordered-dither shader without reducing text contrast. Dense protocol and terminal details arrive below the fold, so evidence follows the primary promise instead of competing with it.
 
 **Key Characteristics:**
 - Warm field-note parchment with deep forest ink
 - Acid-leaf signals reserved for status, action, and branching
 - Botanical forms used as information geometry
 - Dithered wheat-field motion with a static reduced-motion fallback
-- Asymmetric editorial layouts paired with precise runtime specimens
+- Asymmetric editorial layouts with evidence sequenced below the primary promise
 - Clear visual separation between official Eve ownership and Garden native ownership
 
 ## Colors
@@ -142,16 +142,15 @@ The palette pairs warm, lightly chromatic paper with near-black green ink, then 
 
 The shared content shell is capped at 76rem and leaves 1.5rem at each inline edge. At and below 64rem it becomes a narrower fluid shell with 1.25rem edges; at and below 48rem the edges reduce to 1rem. Section spacing is generous and responsive, generally ranging from 6rem to 9rem vertically, so dense evidence panels have room to read.
 
-Desktop compositions favor unequal two-column grids. The hero pairs a narrower copy column with a larger runtime specimen; later sections alternate explanatory copy with protocol or terminal evidence. The runtime comparison uses two equal cards separated by a narrow vertical branch. At 64rem the hero, protocol, and install grids stack. At 48rem navigation links collapse, the runtime comparison becomes a vertical sequence, and principle rows simplify. At 31rem primary and secondary hero actions share the available row, copy controls become full-width, and terminal content wraps safely for a 320px viewport.
+Desktop compositions use the hero as a single, left-anchored copy column over the wheat field; later sections alternate explanatory copy with protocol or terminal evidence. The runtime comparison uses two equal cards separated by a narrow vertical branch. At 64rem the protocol and install grids stack. At 48rem navigation links collapse, the runtime comparison becomes a vertical sequence, and principle rows simplify. At 31rem primary and secondary hero actions share the available row, copy controls become full-width, and terminal content wraps safely for a 320px viewport.
 
 Botanical branching is part of the grid rather than an overlay decoration. Lines, nodes, stems, and leaf marks connect related states and preserve reading order as the layout reflows.
 
 ## Elevation & Depth
 
-The system combines tonal layering with restrained, diffuse shadows. Paper-depth changes establish most hierarchy; shadows are concentrated on interactive actions, the hero specimen, the authoritative official-runtime card, protocol evidence, and the install terminal. Dark operational surfaces also use faint inset lines so their internal structure remains legible.
+The system combines tonal layering with restrained, diffuse shadows. Paper-depth changes establish most hierarchy; shadows are concentrated on interactive actions, the authoritative official-runtime card, protocol evidence, and the install terminal. Dark operational surfaces also use faint inset lines so their internal structure remains legible.
 
 ### Shadow Vocabulary
-- **Raised specimen** (`0 1.25rem 4rem oklch(0.23 0.045 145 / 0.12), 0 0.2rem 0.8rem oklch(0.23 0.045 145 / 0.08)`): The main light specimen floating above the hero field.
 - **Primary action** (`0 0.65rem 1.5rem oklch(0.24 0.08 148 / 0.2), 0 0.15rem 0.4rem oklch(0.24 0.08 148 / 0.16)`): Resting depth for the filled primary button.
 - **Official runtime** (`0 1.5rem 4rem oklch(0.22 0.07 148 / 0.2)`): Gives the official-runtime card stronger authority than the tonal native card.
 - **Operational field** (`0 1.5rem 4rem oklch(0.08 0.025 150 / 0.35), inset 0 0 0 1px oklch(0.9 0.05 110 / 0.1)`): Separates dark stream evidence from the surrounding deep-forest section.
@@ -179,7 +178,7 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Background:** Official mode uses forest with bright paper text. Native mode uses deep field paper with forest ink. Dark protocol and terminal containers use deep forest.
 - **Shadow Strategy:** Official and operational evidence surfaces receive diffuse depth; native mode stays tonal and flat.
 - **Border:** Dividers and dark-field inset edges use low-opacity botanical lines rather than prominent card strokes.
-- **Internal Padding:** Major runtime cards use responsive padding from 1.6rem to 2.6rem; compact specimen branches use 1.2rem.
+- **Internal Padding:** Major runtime cards use responsive padding from 1.6rem to 2.6rem.
 
 ### Navigation
 - **Style:** The brand combines a Bricolage Grotesque wordmark with a seed-shaped forest mark. Links are compact, semibold Manrope in soft ink and become forest on hover. The GitHub link remains forest and includes an external-link glyph.
@@ -190,11 +189,6 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Tuning:** DialKit exposes a shared `ditherScale` control from 1–12 in development so both landscapes can be tuned together.
 - **Lifecycle:** Each landscape uses `requestVideoFrameCallback`, pauses outside its section, owns WebGL cleanup, and falls back to a dithered poster frame when motion is reduced or playback is unavailable. A shared navigation control pauses or resumes both videos.
 - **Attribution:** The adapted CC BY 3.0 wheat footage, CC BY 4.0 treetop footage, and changes are documented in `THIRD_PARTY_NOTICES.md`.
-
-### Runtime Branch Specimen
-- **Style:** A bright-paper raised container shows one recessed Eve-shaped source bed, a moss stem, and two runtime branches. Keep its outside border clean.
-- **Ownership:** The official branch is forest with bright text; the native branch is soft acid leaf with ink text. Their labels and commands stay explicit.
-- **Motion:** Hero content enters in two restrained grouped settles. The command cursor blinks independently. Dithered landscape video pauses outside its section, and reduced-motion users receive the complete static poster artwork.
 
 ### Event Stream
 - **Style:** A deep-forest ordered list uses mono event names, tabular sequence numbers, quiet row separators, and a bright live-status dot.
@@ -210,12 +204,12 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Do** use warm paper depth changes before adding a shadow.
 - **Do** reserve acid leaf for status, action, active evidence, and botanical connectors.
 - **Do** make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.
-- **Do** use stems, nodes, and leaf marks to explain relationships and runtime branching.
+- **Do** use stems, nodes, and leaf marks only when they explain a real relationship.
 - **Do** use botanical or landscape imagery only where it reflects the section’s meaning; prefer footage and CSS geometry over standalone decorative SVGs.
 - **Do** preserve visible focus, reduced-motion behavior, and the documented 320px reflow.
 
 ### Don't:
-- **Don't** center the first viewport into a generic SaaS hero or replace the runtime specimen with a feature-card grid.
+- **Don't** center the first viewport into a generic SaaS hero or add a competing feature-card grid beside the primary promise.
 - **Don't** add disconnected botanical SVG decoration or let landscape media obscure product content.
 - **Don't** style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.
 - **Don't** use acid leaf as a broad background or routine body-text color.

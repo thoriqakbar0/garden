@@ -19,13 +19,11 @@
   --clay: oklch(0.61 0.105 52);
   --line: oklch(0.315 0.045 145 / 0.18);
   --line-strong: oklch(0.315 0.045 145 / 0.32);
-  --shadow: 0 1.25rem 4rem oklch(0.23 0.045 145 / 0.12), 0 0.2rem 0.8rem oklch(0.23 0.045 145 / 0.08);
   --shell: min(76rem, calc(100% - 3rem));
   --radius-sm: 0.65rem;
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
   --text-caption: 0.75rem;
-  --specimen-padding: 1.1rem;
 }
 
 * {
@@ -339,8 +337,7 @@ svg {
   width: var(--shell);
   margin-inline: auto;
   align-items: center;
-  grid-template-columns: minmax(0, 0.9fr) minmax(29rem, 1.1fr);
-  gap: clamp(3rem, 7vw, 7rem);
+  grid-template-columns: minmax(0, 44rem);
 }
 
 .hero-copy h1,
@@ -532,8 +529,6 @@ svg {
 
 .hero-facts dt,
 .mode-topline span,
-.branch-label,
-.folder-tab,
 .event-field-head,
 .terminal-title {
   color: var(--ink-soft);
@@ -552,205 +547,12 @@ svg {
   font-weight: 700;
 }
 
-.runtime-specimen {
-  position: relative;
-  margin: 0;
-  padding: var(--specimen-padding);
-  background: oklch(0.99 0.008 96 / 0.92);
-  border-radius: calc(var(--radius-md) + var(--specimen-padding));
-  box-shadow: var(--shadow);
-}
-
-.specimen-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.15rem 0.25rem 1rem;
-  color: var(--ink-soft);
-  font-family: var(--font-mono), monospace;
-  font-size: var(--text-caption);
-}
-
-.healthy {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.healthy i,
 .event-field-head i {
   width: 0.45rem;
   height: 0.45rem;
   background: var(--moss);
   border-radius: 50%;
   box-shadow: 0 0 0 0.22rem oklch(0.48 0.105 139 / 0.16);
-}
-
-.source-bed {
-  position: relative;
-  padding: 1.35rem 1.4rem;
-  background: var(--paper-deep);
-  border-radius: var(--radius-md);
-}
-
-.source-bed > code {
-  display: block;
-  margin-block: 1rem 0.4rem;
-  font-family: var(--font-mono), monospace;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.source-bed ul {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  gap: 0.2rem;
-  color: var(--ink-soft);
-  font-family: var(--font-mono), monospace;
-  font-size: var(--text-caption);
-  list-style: none;
-}
-
-.source-bed li::before {
-  content: "";
-  display: inline-block;
-  width: 0.65rem;
-  height: 1px;
-  margin-inline-end: 0.55rem;
-  vertical-align: middle;
-  background: var(--moss);
-}
-
-.stem {
-  position: relative;
-  width: 100%;
-  height: 4rem;
-}
-
-.stem::before,
-.stem::after {
-  content: "";
-  position: absolute;
-  background: var(--moss);
-}
-
-.stem::before {
-  inset-block: 0;
-  inset-inline-start: 50%;
-  width: 1px;
-}
-
-.stem::after {
-  inset-block-end: 0;
-  inset-inline: 25% 25%;
-  height: 1px;
-}
-
-.stem i {
-  position: absolute;
-  width: 0.55rem;
-  height: 0.55rem;
-  border: 1px solid var(--moss);
-  background: var(--paper-bright);
-  border-radius: 50%;
-  transform: translate(-50%, 50%);
-}
-
-.stem i:nth-child(1) { inset-block-end: 0; inset-inline-start: 25%; }
-.stem i:nth-child(2) { inset-block-end: 0; inset-inline-start: 50%; background: var(--leaf); }
-.stem i:nth-child(3) { inset-block-end: 0; inset-inline-start: 75%; }
-
-.runtime-branches {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
-}
-
-.branch {
-  display: grid;
-  min-height: 11.5rem;
-  padding: 1.2rem;
-  align-content: start;
-  border-radius: var(--radius-md);
-}
-
-.branch-official {
-  color: var(--paper-bright);
-  background: var(--forest);
-  box-shadow: 0 0.85rem 2rem oklch(0.22 0.07 148 / 0.18);
-}
-
-.branch-native {
-  color: var(--ink);
-  background: var(--leaf-soft);
-}
-
-.branch-official .branch-label,
-.branch-official small {
-  color: oklch(0.96 0.025 110 / 0.88);
-}
-
-.runtime-specimen .branch-label,
-.runtime-specimen .folder-tab {
-  font-size: var(--text-caption);
-}
-
-.branch-native .branch-label {
-  color: oklch(0.3 0.055 145 / 0.82);
-}
-
-.branch strong {
-  margin-block-start: 1rem;
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.25rem;
-  letter-spacing: -0.025em;
-}
-
-.branch code {
-  width: fit-content;
-  margin-block-start: 0.65rem;
-  padding: 0.25rem 0.45rem;
-  font-family: var(--font-mono), monospace;
-  font-size: var(--text-caption);
-  background: oklch(1 0 0 / 0.12);
-  border-radius: 0.3rem;
-}
-
-.branch-native code {
-  background: oklch(0.3 0.06 145 / 0.1);
-}
-
-.branch small {
-  margin-block-start: auto;
-  color: var(--ink-soft);
-  font-size: var(--text-caption);
-}
-
-.specimen-command {
-  display: flex;
-  min-height: 3.7rem;
-  margin-block-start: 0.8rem;
-  padding-inline: 1rem;
-  align-items: center;
-  gap: 0.65rem;
-  color: oklch(0.88 0.075 113);
-  background: var(--forest-deep);
-  border-radius: var(--radius-md);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.75rem;
-  overflow: hidden;
-}
-
-.specimen-command > span:first-child {
-  color: var(--leaf);
-}
-
-.cursor {
-  display: block;
-  flex: 0 0 0.4rem;
-  height: 1rem;
-  background: var(--leaf);
 }
 
 .runtime-section,
@@ -876,10 +678,6 @@ svg {
 
 .mode-official p {
   color: oklch(0.94 0.025 112 / 0.84);
-}
-
-.branch-official small {
-  color: oklch(0.93 0.03 110 / 0.78);
 }
 
 .mode-command {
@@ -1408,28 +1206,8 @@ footer {
     transform: translateY(0);
   }
 
-  .runtime-specimen {
-    opacity: 0;
-    transform: translateY(0.5rem);
-    transition:
-      opacity 280ms ease-out,
-      transform 360ms var(--hero-enter-easing);
-  }
-
-  .runtime-specimen.is-revealed {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .cursor {
-    animation: cursor-blink 1s steps(1, end) infinite;
-  }
 }
 
-@keyframes cursor-blink {
-  0%, 48% { opacity: 1; }
-  49%, 100% { opacity: 0; }
-}
 
 @media (max-width: 64rem) {
   :root { --shell: min(100% - 2.5rem, 58rem); }
@@ -1443,7 +1221,6 @@ footer {
 
   .hero-copy { max-width: 44rem; }
   .hero-copy h1 { max-width: 11ch; }
-  .runtime-specimen { width: min(100%, 42rem); }
   .protocol-copy { max-width: 42rem; }
   .event-field { width: min(100%, 42rem); }
   .install-terminal { width: min(100%, 42rem); }
@@ -1493,23 +1270,10 @@ footer {
     margin-block-start: 1.15rem;
   }
 
-  .runtime-specimen {
-    --specimen-padding: 0.8rem;
-    margin-block-start: 0.75rem;
-  }
-
   .hero-facts {
     gap: 1rem 1.5rem;
     margin-block-start: 1.5rem;
   }
-  .runtime-branches { grid-template-columns: 1fr; }
-  .stem { height: 2.75rem; }
-  .stem::after { display: none; }
-  .stem i:nth-child(1),
-  .stem i:nth-child(3) { display: none; }
-  .branch { min-height: 10rem; }
-  .specimen-command code { overflow-wrap: anywhere; }
-
   .section-intro,
   .principles-intro {
     grid-template-columns: 1fr;
@@ -1574,9 +1338,6 @@ footer {
     font-size: 0.75rem;
   }
   .button-secondary { min-height: 3.25rem; }
-  .runtime-specimen { margin-inline: -0.25rem; width: calc(100% + 0.5rem); }
-  .specimen-header { flex-direction: column; gap: 0.35rem; }
-  .source-bed { padding: 1.1rem; }
   .hero-facts { display: grid; grid-template-columns: 1fr 1fr; }
   .install-terminal { border-radius: var(--radius-md); }
   .copy-command,

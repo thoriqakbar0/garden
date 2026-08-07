@@ -89,11 +89,6 @@
     },
     "shadows": [
       {
-        "name": "raised-specimen",
-        "value": "0 1.25rem 4rem oklch(0.23 0.045 145 / 0.12), 0 0.2rem 0.8rem oklch(0.23 0.045 145 / 0.08)",
-        "purpose": "Main light specimen above the hero field."
-      },
-      {
         "name": "primary-action",
         "value": "0 0.65rem 1.5rem oklch(0.24 0.08 148 / 0.2), 0 0.15rem 0.4rem oklch(0.24 0.08 148 / 0.16)",
         "purpose": "Filled primary button at rest."
@@ -127,8 +122,8 @@
       },
       {
         "name": "hero-settle",
-        "value": "280–360ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "Settles the hero copy and runtime specimen in two restrained groups."
+        "value": "280ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Settles the hero copy into view."
       },
       {
         "name": "landscape-dither",
@@ -139,11 +134,6 @@
         "name": "eve-mark-glitch",
         "value": "420ms steps(2, end), hover/focus only",
         "purpose": "Briefly glitches the inline official Eve mark; disabled under reduced motion."
-      },
-      {
-        "name": "cursor-blink",
-        "value": "1s steps(1, end) infinite",
-        "purpose": "Blinks the specimen command cursor."
       }
     ],
     "breakpoints": [
@@ -229,13 +219,13 @@
   ],
   "narrative": {
     "northStar": "Cultivated systems",
-    "overview": "Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Natural footage carries the botanical atmosphere; CSS stems, nodes, and leaf marks explain runtime relationships without relying on disconnected decorative SVG illustrations.\n\nThe composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Licensed wheat and treetop footage moves through one tunable Garden-colored ordered-dither shader without reducing text contrast. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.",
+    "overview": "Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Natural footage carries the botanical atmosphere; CSS stems, nodes, and leaf marks explain runtime relationships without relying on disconnected decorative SVG illustrations.\n\nThe composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise sits directly in a living wheat field with generous open space for the footage. Licensed wheat and treetop footage moves through one tunable Garden-colored ordered-dither shader without reducing text contrast. Dense protocol and terminal details arrive below the fold, so evidence follows the primary promise instead of competing with it.",
     "keyCharacteristics": [
       "Warm field-note parchment with deep forest ink",
       "Acid-leaf signals reserved for status, action, and branching",
       "Botanical forms used as information geometry",
       "Tunable dithered wheat and treetop motion with static reduced-motion fallbacks",
-      "Asymmetric editorial layouts paired with precise runtime specimens",
+      "Asymmetric editorial layouts with evidence sequenced below the primary promise",
       "Clear visual separation between official Eve ownership and Garden native ownership",
       "Official Eve provenance integrated directly into the hero headline"
     ],
@@ -244,12 +234,12 @@
       "Do use warm paper depth changes before adding a shadow.",
       "Do reserve acid leaf for status, action, active evidence, and botanical connectors.",
       "Do make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.",
-      "Do use stems, nodes, and leaf marks to explain relationships and runtime branching.",
+      "Do use stems, nodes, and leaf marks only when they explain a real relationship.",
       "Do use botanical or landscape imagery only where it reflects the section’s meaning; prefer footage and CSS geometry over standalone decorative SVGs.",
       "Do preserve visible focus, reduced-motion behavior, and the documented 320px reflow."
     ],
     "donts": [
-      "Don't center the first viewport into a generic SaaS hero or replace the runtime specimen with a feature-card grid.",
+      "Don't center the first viewport into a generic SaaS hero or add a competing feature-card grid beside the primary promise.",
       "Don't add disconnected botanical SVG decoration or let landscape media obscure product content.",
       "Don't style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.",
       "Don't use acid leaf as a broad background or routine body-text color.",
