@@ -90,7 +90,11 @@ func runnerFromConfig(app discover.Application, getenv func(string) string, clie
 		if err != nil {
 			return nil, fmt.Errorf("invalid GARDEN_OPENAI_BASE_URL: %w", err)
 		}
-		backend = &openAIModel{client: client, endpoint: endpoint, apiKey: apiKey}
+		headers := map[string]string{}
+		if token := strings.TrimSpace(getenv("GARDEN_CLOUDFLARE_GATEWAY_TOKEN")); token != "" {
+			headers["cf-aig-authorization"] = "Bearer " + token
+		}
+		backend = &openAIModel{client: client, endpoint: endpoint, apiKey: apiKey, headers: headers}
 	default:
 		return nil, errors.New("GARDEN_MODEL_BACKEND must be set to openai or codex")
 	}

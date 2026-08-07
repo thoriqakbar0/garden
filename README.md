@@ -180,7 +180,8 @@ or a trusted reverse proxy provides the intended external authorization.
 | `GARDEN_MODEL` | Optional model override. When unset, `openai` uses the literal model discovered in `agent/agent.ts`; `codex` defaults to `gpt-5.6-sol`. |
 | `GARDEN_CODEX_SANDBOX` | Optional Codex terminal policy: `workspace-write` (default) or `read-only`. Garden rejects `danger-full-access`. |
 | `GARDEN_OPENAI_BASE_URL` | OpenAI-compatible API base. Defaults to `https://api.openai.com/v1` when an API key is set. |
-| `GARDEN_OPENAI_API_KEY` | Optional bearer credential; local endpoints may omit it. |
+| `GARDEN_OPENAI_API_KEY` | Optional upstream bearer credential; local endpoints and Cloudflare Gateway BYOK may omit it. |
+| `GARDEN_CLOUDFLARE_GATEWAY_TOKEN` | Optional Cloudflare AI Gateway credential, sent only as `cf-aig-authorization`. |
 | `CODEX_HOME` | Codex state directory, default `~/.codex`. |
 | `GARDEN_AUTH_TOKEN` | Required bearer token when `serve` binds beyond loopback. |
 
@@ -198,14 +199,38 @@ Use read-only terminal access when the agent should inspect but never edit:
 export GARDEN_CODEX_SANDBOX=read-only
 ```
 
-OpenAI-compatible example:
+OpenRouter's free-model router works through the same adapter:
 
 ```sh
 export GARDEN_MODEL_BACKEND=openai
-export GARDEN_OPENAI_API_KEY=...
-export GARDEN_MODEL=gpt-5.4-mini
+export GARDEN_OPENAI_BASE_URL=https://openrouter.ai/api/v1
+export GARDEN_OPENAI_API_KEY="$OPENROUTER_API_KEY"
+export GARDEN_MODEL=openrouter/free
 ./garden run --root examples/eve-weather --message "Weather in Jakarta?"
 ```
+
+Cloudflare Workers AI also exposes an OpenAI-compatible endpoint. Accounts with
+free Workers AI allocation can run the example without a separate model-provider
+account:
+
+```sh
+export CLOUDFLARE_ACCOUNT_ID=your-account-id
+export GARDEN_MODEL_BACKEND=openai
+export GARDEN_OPENAI_BASE_URL="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1"
+export GARDEN_OPENAI_API_KEY="$CLOUDFLARE_API_TOKEN"
+export GARDEN_MODEL=@cf/ibm-granite/granite-4.0-h-micro
+./garden run --root examples/eve-weather --message "Weather in Jakarta?"
+```
+
+For Cloudflare AI Gateway's OpenAI-compatible `/compat` endpoint, set that URL
+as `GARDEN_OPENAI_BASE_URL`. If the gateway requires authentication, set
+`GARDEN_CLOUDFLARE_GATEWAY_TOKEN`; Garden sends it in the dedicated
+`cf-aig-authorization` header while keeping `GARDEN_OPENAI_API_KEY` available
+for provider authentication.
+
+The adapter accepts both standard JSON-object tool arguments and the
+string-wrapped arguments returned by some compatible providers. Assistant tool
+messages include explicit empty content for providers that require it.
 
 OpenAI-compatible requests, responses, and native tool payloads are bounded to
 1 MiB. Each OpenAI model or tool step has a 60-second deadline and one turn may
