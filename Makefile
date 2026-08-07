@@ -1,5 +1,6 @@
 BINDIR ?= $(HOME)/.local/bin
 EVE_PARITY_FIXTURE ?= examples/eve-parity
+GO_PACKAGES := $(shell go list ./... | grep -v '/node_modules/')
 
 .PHONY: build install test test-hermetic test-race test-official test-all list-tests check
 
@@ -13,10 +14,10 @@ install: build
 test: test-hermetic
 
 test-hermetic:
-	go test -count=1 ./...
+	go test -count=1 $(GO_PACKAGES)
 
 test-race:
-	go test -race -count=1 ./...
+	go test -race -count=1 $(GO_PACKAGES)
 
 test-official:
 	npm ci --prefix "$(EVE_PARITY_FIXTURE)"
@@ -30,8 +31,8 @@ test-official:
 test-all: check test-official
 
 list-tests:
-	go test -list '^(Test|Fuzz|Benchmark)' ./...
+	go test -list '^(Test|Fuzz|Benchmark)' $(GO_PACKAGES)
 
 check:
-	go vet ./...
+	go vet $(GO_PACKAGES)
 	$(MAKE) test-race

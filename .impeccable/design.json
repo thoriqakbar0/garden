@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T18:10:20.905466Z",
+  "title": "Design System: Garden",
+  "extensions": {
+    "colorMeta": {
+      "field-paper": {
+        "role": "neutral",
+        "displayName": "Field Paper",
+        "canonical": "oklch(0.973 0.018 95)"
+      },
+      "field-paper-deep": {
+        "role": "neutral",
+        "displayName": "Deep Field Paper",
+        "canonical": "oklch(0.932 0.032 99)"
+      },
+      "field-paper-bright": {
+        "role": "neutral",
+        "displayName": "Bright Field Paper",
+        "canonical": "oklch(0.992 0.007 95)"
+      },
+      "forest-ink": {
+        "role": "neutral",
+        "displayName": "Forest Ink",
+        "canonical": "oklch(0.225 0.04 147)"
+      },
+      "forest-ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Forest Ink",
+        "canonical": "oklch(0.405 0.036 145)"
+      },
+      "forest": {
+        "role": "primary",
+        "displayName": "Forest",
+        "canonical": "oklch(0.285 0.085 148)"
+      },
+      "forest-deep": {
+        "role": "primary",
+        "displayName": "Deep Forest",
+        "canonical": "oklch(0.205 0.055 150)"
+      },
+      "moss": {
+        "role": "secondary",
+        "displayName": "Moss",
+        "canonical": "oklch(0.48 0.105 139)"
+      },
+      "acid-leaf": {
+        "role": "secondary",
+        "displayName": "Acid Leaf",
+        "canonical": "oklch(0.82 0.155 116)"
+      },
+      "acid-leaf-soft": {
+        "role": "secondary",
+        "displayName": "Soft Acid Leaf",
+        "canonical": "oklch(0.9 0.085 112)"
+      },
+      "botanical-line": {
+        "role": "neutral",
+        "displayName": "Botanical Line",
+        "canonical": "oklch(0.315 0.045 145 / 0.18)"
+      },
+      "botanical-line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Botanical Line",
+        "canonical": "oklch(0.315 0.045 145 / 0.32)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "First-viewport promise."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Major narrative turns and closing statements."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Explanations and supporting copy."
+      },
+      "technical-label": {
+        "displayName": "Technical Label",
+        "purpose": "Commands, modes, versions, streams, and operational metadata."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Buttons and prominent links."
+      }
+    },
+    "shadows": [
+      {
+        "name": "raised-specimen",
+        "value": "0 1.25rem 4rem oklch(0.23 0.045 145 / 0.12), 0 0.2rem 0.8rem oklch(0.23 0.045 145 / 0.08)",
+        "purpose": "Main light specimen above the hero field."
+      },
+      {
+        "name": "primary-action",
+        "value": "0 0.65rem 1.5rem oklch(0.24 0.08 148 / 0.2), 0 0.15rem 0.4rem oklch(0.24 0.08 148 / 0.16)",
+        "purpose": "Filled primary button at rest."
+      },
+      {
+        "name": "primary-action-hover",
+        "value": "0 0.85rem 2rem oklch(0.24 0.08 148 / 0.24), 0 0.15rem 0.4rem oklch(0.24 0.08 148 / 0.16)",
+        "purpose": "Filled primary button on hover."
+      },
+      {
+        "name": "official-runtime",
+        "value": "0 1.5rem 4rem oklch(0.22 0.07 148 / 0.2)",
+        "purpose": "Authoritative official-runtime card and install terminal."
+      },
+      {
+        "name": "operational-field",
+        "value": "0 1.5rem 4rem oklch(0.08 0.025 150 / 0.35), inset 0 0 0 1px oklch(0.9 0.05 110 / 0.1)",
+        "purpose": "Dark protocol event field."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "160ms cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Button color, background, shadow, and transform transitions."
+      },
+      {
+        "name": "navigation-color",
+        "value": "150ms",
+        "purpose": "Navigation color transitions."
+      },
+      {
+        "name": "grow-stem",
+        "value": "900ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both",
+        "purpose": "Grows the hero specimen's central stem when reduced motion is not requested."
+      },
+      {
+        "name": "spread-root",
+        "value": "700ms cubic-bezier(0.16, 1, 0.3, 1) 850ms both",
+        "purpose": "Spreads the hero specimen's branch after the stem grows."
+      },
+      {
+        "name": "cursor-blink",
+        "value": "1s steps(1, end) infinite",
+        "purpose": "Blinks the specimen command cursor."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "64rem"
+      },
+      {
+        "name": "mobile",
+        "value": "48rem"
+      },
+      {
+        "name": "compact",
+        "value": "31rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main installation or source action.",
+      "html": "<a class=\"ds-button-primary\" href=\"#\">Install Garden <svg viewBox=\"0 0 20 20\" aria-hidden=\"true\"><path d=\"M4 10h11M11 6l4 4-4 4\" /></svg></a>",
+      "css": ".ds-button-primary { display:inline-flex; min-height:3.25rem; padding-inline:1.2rem; align-items:center; justify-content:center; gap:.55rem; color:var(--paper-bright); background:var(--forest); border-radius:var(--radius-sm); box-shadow:0 .65rem 1.5rem oklch(0.24 0.08 148 / .2),0 .15rem .4rem oklch(0.24 0.08 148 / .16); font:750 .9rem var(--font-body),sans-serif; text-decoration:none; transition:color 160ms cubic-bezier(.2,0,0,1),background-color 160ms cubic-bezier(.2,0,0,1),box-shadow 160ms cubic-bezier(.2,0,0,1),transform 160ms cubic-bezier(.2,0,0,1);}.ds-button-primary svg{width:1.05rem;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}.ds-button-primary:hover{background:var(--forest-deep);box-shadow:0 .85rem 2rem oklch(0.24 0.08 148 / .24),0 .15rem .4rem oklch(0.24 0.08 148 / .16)}.ds-button-primary:focus-visible{outline:2px solid currentColor;outline-offset:4px}.ds-button-primary:active{transform:scale(.96)}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary compatibility or documentation action.",
+      "html": "<a class=\"ds-button-secondary\" href=\"#\">Read compatibility</a>",
+      "css": ".ds-button-secondary{display:inline-flex;min-height:3.25rem;padding-inline:1.2rem;align-items:center;justify-content:center;color:var(--forest);background:transparent;border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--line-strong);font:750 .9rem var(--font-body),sans-serif;text-decoration:none;transition:background-color 160ms cubic-bezier(.2,0,0,1),transform 160ms cubic-bezier(.2,0,0,1)}.ds-button-secondary:hover{background:var(--paper-bright)}.ds-button-secondary:focus-visible{outline:2px solid currentColor;outline-offset:4px}.ds-button-secondary:active{transform:scale(.96)}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Garden wordmark, section links, and persistent GitHub exit.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-brand\" href=\"#\"><span class=\"ds-brand-mark\"><svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><path d=\"M16 27V12M16 16C10 16 6 12 6 6c6 0 10 4 10 10ZM16 21c0-6 4-10 10-10 0 6-4 10-10 10Z\" /></svg></span><span>garden</span></a><div class=\"ds-nav-links\"><a href=\"#\">Runtime</a><a href=\"#\">Protocol</a><a href=\"#\">Install</a></div><a class=\"ds-nav-github\" href=\"#\">GitHub</a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;justify-content:space-between;min-height:3.25rem;gap:2rem;color:var(--ink)}.ds-brand{display:inline-flex;align-items:center;min-height:2.75rem;gap:.65rem;font:700 1.1rem var(--font-display),sans-serif;letter-spacing:-.025em;text-decoration:none}.ds-brand-mark{display:grid;width:2rem;height:2rem;color:var(--paper-bright);background:var(--forest);border-radius:50% 50% 45% 55%;place-items:center;rotate:-5deg}.ds-brand-mark svg{width:1.3rem;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}.ds-nav-links{display:flex;align-items:center;gap:2rem;margin-inline-start:auto}.ds-nav-links a,.ds-nav-github{display:inline-flex;min-height:2.75rem;align-items:center;color:var(--ink-soft);font:650 .875rem var(--font-body),sans-serif;text-decoration:none;transition:color 150ms}.ds-nav-github{color:var(--forest)}.ds-nav a:hover{color:var(--forest)}.ds-nav a:focus-visible{outline:2px solid currentColor;outline-offset:4px}"
+    },
+    {
+      "name": "Official Runtime Card",
+      "kind": "card",
+      "refersTo": "runtime-card-official",
+      "description": "Authoritative surface for behavior owned by the pinned official Eve runtime.",
+      "html": "<article class=\"ds-mode-official\"><div class=\"ds-mode-topline\"><span>Official mode</span><code>eve@0.27.6</code></div><h3>Your Eve project, still itself.</h3><p>Garden supervises the pinned project-local runtime.</p><div class=\"ds-mode-command\"><code>garden serve --runtime eve</code></div></article>",
+      "css": ".ds-mode-official{min-height:20rem;padding:2.6rem;color:var(--paper-bright);background:var(--forest);border-radius:var(--radius-lg);box-shadow:0 1.5rem 4rem oklch(0.22 0.07 148 / .2);font-family:var(--font-body),sans-serif}.ds-mode-topline{display:flex;justify-content:space-between;gap:1rem;margin-block-end:1rem;color:oklch(0.94 0.025 112 / .8);font:600 .67rem/1.4 var(--font-mono),monospace;letter-spacing:.08em;text-transform:uppercase}.ds-mode-official h3{max-width:13ch;margin:0 0 1.35rem;font:650 3rem/1.05 var(--font-display),sans-serif;letter-spacing:-.035em}.ds-mode-official p{color:oklch(0.94 0.025 112 / .84);line-height:1.6}.ds-mode-command{margin-block-start:2rem;padding:1rem 1.1rem;background:oklch(0.17 0.04 150 / .23);border-radius:var(--radius-sm);font:.76rem var(--font-mono),monospace}"
+    },
+    {
+      "name": "Native Runtime Card",
+      "kind": "card",
+      "refersTo": "runtime-card-native",
+      "description": "Tonal surface for Garden's deliberately smaller native contract.",
+      "html": "<article class=\"ds-mode-native\"><div class=\"ds-native-topline\"><span>Native mode</span><code>garden</code></div><h3>A smaller contract, deliberately.</h3><p>Sessions, live streams, model and native-tool turns live in one Go process.</p><div class=\"ds-native-command\"><code>garden serve</code></div></article>",
+      "css": ".ds-mode-native{min-height:20rem;padding:2.6rem;color:var(--ink);background:var(--paper-deep);border-radius:var(--radius-lg);font-family:var(--font-body),sans-serif}.ds-native-topline{display:flex;justify-content:space-between;gap:1rem;margin-block-end:1rem;color:var(--ink-soft);font:600 .67rem/1.4 var(--font-mono),monospace;letter-spacing:.08em;text-transform:uppercase}.ds-mode-native h3{max-width:13ch;margin:0 0 1.35rem;font:650 3rem/1.05 var(--font-display),sans-serif;letter-spacing:-.035em}.ds-mode-native p{color:var(--ink-soft);line-height:1.6}.ds-native-command{margin-block-start:2rem;padding:1rem 1.1rem;background:oklch(0.99 0.007 96 / .72);border-radius:var(--radius-sm);font:.76rem var(--font-mono),monospace}"
+    },
+    {
+      "name": "Event Stream",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Inspectable protocol-v19 session events with one active-result accent.",
+      "html": "<div class=\"ds-event-field\"><div class=\"ds-event-head\"><span>session stream</span><span><i></i> live</span></div><ol><li><span>003</span><code>actions.requested</code><small>get_weather</small></li><li class=\"ds-event-accent\"><span>004</span><code>action.result</code><small>72°F · sunny</small></li><li><span>005</span><code>message.completed</code><small>assistant</small></li></ol></div>",
+      "css": ".ds-event-field{overflow:hidden;color:var(--paper-bright);background:oklch(0.16 0.035 150 / .8);border-radius:var(--radius-lg);box-shadow:0 1.5rem 4rem oklch(0.08 0.025 150 / .35),inset 0 0 0 1px oklch(0.9 0.05 110 / .1);font-family:var(--font-mono),monospace}.ds-event-head{display:flex;min-height:4rem;padding-inline:1.4rem;align-items:center;justify-content:space-between;color:oklch(0.9 0.03 110 / .6);border-block-end:1px solid oklch(0.9 0.05 110 / .1);font-size:.67rem;letter-spacing:.08em;text-transform:uppercase}.ds-event-head span:last-child{display:flex;align-items:center;gap:.5rem;color:var(--leaf)}.ds-event-head i{width:.45rem;height:.45rem;background:var(--moss);border-radius:50%;box-shadow:0 0 0 .22rem oklch(0.48 0.105 139 / .16)}.ds-event-field ol{margin:0;padding:0;list-style:none}.ds-event-field li{display:grid;min-height:4rem;padding-inline:1.4rem;align-items:center;grid-template-columns:2.6rem minmax(0,1fr) auto;gap:1rem;border-block-end:1px solid oklch(0.9 0.05 110 / .08)}.ds-event-field li>span,.ds-event-field small{color:oklch(0.92 0.03 110 / .7);font-size:.64rem}.ds-event-field code{color:oklch(0.94 0.025 110);font-size:.75rem}.ds-event-accent{background:oklch(0.82 0.155 116 / .1)}.ds-event-accent code,.ds-event-accent small{color:var(--leaf)}"
+    },
+    {
+      "name": "Requirement Chip",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Static operational prerequisite used near installation guidance.",
+      "html": "<span class=\"ds-requirement\">Node 24+ for official Eve</span>",
+      "css": ".ds-requirement{display:inline-block;padding:.35rem .55rem;color:var(--ink-soft);background:oklch(0.99 0.007 96 / .65);border-radius:999px;font:.63rem var(--font-mono),monospace}"
+    },
+    {
+      "name": "Copy Command",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Terminal command row with an accessible clipboard action.",
+      "html": "<div class=\"ds-copy-command\"><code>git clone https://github.com/thoriqakbar0/garden.git</code><button type=\"button\">Copy</button></div>",
+      "css": ".ds-copy-command{display:grid;min-height:4rem;padding-inline:1.4rem;align-items:center;grid-template-columns:minmax(0,1fr) auto;gap:1rem;color:oklch(0.92 0.025 110);background:var(--forest-deep);border-block-end:1px solid oklch(0.9 0.05 110 / .08);font-family:var(--font-mono),monospace}.ds-copy-command code{overflow-wrap:anywhere;font-size:.7rem}.ds-copy-command button{min-width:3.5rem;min-height:2.5rem;padding-inline:.7rem;color:var(--leaf);background:transparent;border:1px solid oklch(0.82 0.155 116 / .32);border-radius:.45rem;cursor:pointer;font:650 .65rem var(--font-body),sans-serif;transition:color 150ms,background-color 150ms,transform 150ms}.ds-copy-command button:hover{color:var(--forest-deep);background:var(--leaf)}.ds-copy-command button:focus-visible{outline:2px solid currentColor;outline-offset:4px}.ds-copy-command button:active{transform:scale(.96)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Cultivated systems",
+    "overview": "Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching without turning the product into a decorative garden theme. Botanical geometry is structural: stems, nodes, leaves, and paired branches explain how one Eve-shaped project reaches two explicitly different runtimes.\n\nThe composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.",
+    "keyCharacteristics": [
+      "Warm field-note parchment with deep forest ink",
+      "Acid-leaf signals reserved for status, action, and branching",
+      "Botanical forms used as information geometry",
+      "Asymmetric editorial layouts paired with precise runtime specimens",
+      "Clear visual separation between official Eve ownership and Garden native ownership"
+    ],
+    "rules": [],
+    "dos": [
+      "Do use warm paper depth changes before adding a shadow.",
+      "Do reserve acid leaf for status, action, active evidence, and botanical connectors.",
+      "Do make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.",
+      "Do use stems, nodes, and leaf marks to explain relationships and runtime branching.",
+      "Do preserve visible focus, reduced-motion behavior, and the documented 320px reflow."
+    ],
+    "donts": [
+      "Don't center the first viewport into a generic SaaS hero or replace the runtime specimen with a feature-card grid.",
+      "Don't use decorative garden imagery when botanical geometry can carry system meaning.",
+      "Don't style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.",
+      "Don't use acid leaf as a broad background or routine body-text color.",
+      "Don't fabricate hosted-service, deployment, benchmark, customer, or compatibility claims."
+    ]
+  }
+}
