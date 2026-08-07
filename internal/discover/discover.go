@@ -166,18 +166,31 @@ func namedDirectories(root string) ([]string, error) {
 	return names, nil
 }
 
+func scheduleFile(path string) bool {
+	return sourceFile(path) || filepath.Ext(path) == ".md"
+}
+
 func schedules(root, projectRoot string) ([]Schedule, error) {
-	files, err := namedFiles(root, sourceFile)
+	files, err := namedFiles(root, scheduleFile)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]Schedule, 0, len(files))
+	seen := make(map[string]struct{}, len(files))
 	for _, id := range files {
-		path := filepath.Join(root, filepath.FromSlash(id)+".ts")
-		source, readErr := os.ReadFile(path)
-		if errors.Is(readErr, fs.ErrNotExist) {
-			path = filepath.Join(root, filepath.FromSlash(id)+".js")
+		if _, exists := seen[id]; exists {
+			return nil, fmt.Errorf("duplicate schedule id %q", id)
+		}
+		seen[id] = struct{}{}
+		var path string
+		var source []byte
+		var readErr error
+		for _, extension := range []string{".ts", ".js", ".mjs", ".md"} {
+			path = filepath.Join(root, filepath.FromSlash(id)+extension)
 			source, readErr = os.ReadFile(path)
+			if readErr == nil || !errors.Is(readErr, fs.ErrNotExist) {
+				break
+			}
 		}
 		if readErr != nil {
 			return nil, fmt.Errorf("read schedule %s: %w", id, readErr)

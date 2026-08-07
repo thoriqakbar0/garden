@@ -1,0 +1,17 @@
+{
+  "name": "garden-eve-parity",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "eve dev",
+    "build": "eve build"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "ai": "7.0.34",
+    "eve": "0.27.6",
+    "just-bash": "3.0.0",
+    "zod": "4.4.3"
+  }
+}

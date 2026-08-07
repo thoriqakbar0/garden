@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -87,12 +86,18 @@ func waitForOfficialEve(t *testing.T, baseURL string, done chan error, output *s
 
 func assertOfficialToolDiscovered(t *testing.T, baseURL string) {
 	t.Helper()
-	response, err := http.Get(baseURL + "/eve/v1/info")
+	response, err := (&http.Client{Timeout: 5 * time.Second}).Get(baseURL + "/eve/v1/info")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("official Eve info status = %d", response.StatusCode)
+	}
 	var payload struct {
+		Diagnostics struct {
+			DiscoveryErrors int `json:"discoveryErrors"`
+		} `json:"diagnostics"`
 		Tools struct {
 			Authored []struct {
 				LogicalPath string `json:"logicalPath"`
@@ -102,6 +107,9 @@ func assertOfficialToolDiscovered(t *testing.T, baseURL string) {
 	}
 	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
+	}
+	if payload.Diagnostics.DiscoveryErrors != 0 {
+		t.Fatalf("official Eve discovery errors = %d", payload.Diagnostics.DiscoveryErrors)
 	}
 	for _, tool := range payload.Tools.Authored {
 		if tool.Name == "typescript_echo" && tool.LogicalPath == "tools/typescript_echo.ts" {
@@ -113,7 +121,7 @@ func assertOfficialToolDiscovered(t *testing.T, baseURL string) {
 
 func createOfficialSession(t *testing.T, baseURL string) string {
 	t.Helper()
-	response, err := http.Post(
+	response, err := (&http.Client{Timeout: 5 * time.Second}).Post(
 		baseURL+"/eve/v1/session",
 		"application/json",
 		bytes.NewBufferString(`{"message":"prove TypeScript plus terminal parity"}`),
@@ -177,16 +185,23 @@ func assertOfficialParityStream(t *testing.T, baseURL, sessionID string) {
 		case "action.result":
 			var data struct {
 				Result struct {
-					Output   json.RawMessage `json:"output"`
-					ToolName string          `json:"toolName"`
+					Output struct {
+						ExitCode int    `json:"exitCode"`
+						Marker   string `json:"marker"`
+						Stdout   string `json:"stdout"`
+						Value    string `json:"value"`
+					} `json:"output"`
+					ToolName string `json:"toolName"`
 				} `json:"result"`
 			}
 			if err := json.Unmarshal(event.Data, &data); err != nil {
 				t.Fatal(err)
 			}
-			output := string(data.Result.Output)
-			foundBash = foundBash || data.Result.ToolName == "bash" && strings.Contains(output, "sandbox-terminal-1to1")
-			foundTypeScript = foundTypeScript || data.Result.ToolName == "typescript_echo" && strings.Contains(output, "authored-typescript") && strings.Contains(output, "GARDEN-1TO1")
+			foundBash = foundBash || data.Result.ToolName == "bash" &&
+				data.Result.Output.ExitCode == 0 && data.Result.Output.Stdout == "sandbox-terminal-1to1"
+			foundTypeScript = foundTypeScript || data.Result.ToolName == "typescript_echo" &&
+				data.Result.Output.Marker == "authored-typescript" &&
+				data.Result.Output.Value == "GARDEN-1TO1:sandbox-terminal-1to1"
 		case "message.completed":
 			var data struct {
 				Message string `json:"message"`
@@ -194,12 +209,14 @@ func assertOfficialParityStream(t *testing.T, baseURL, sessionID string) {
 			if err := json.Unmarshal(event.Data, &data); err != nil {
 				t.Fatal(err)
 			}
-			foundFinal = strings.Contains(data.Message, "sandbox-terminal-1to1") && strings.Contains(data.Message, "authored-typescript")
+			foundFinal = data.Message == "bash=sandbox-terminal-1to1; authored=authored-typescript; value=GARDEN-1TO1:sandbox-terminal-1to1"
 		case "session.waiting":
 			if !foundBash || !foundTypeScript || !foundFinal {
 				t.Fatalf("parity evidence: bash=%t TypeScript=%t final=%t", foundBash, foundTypeScript, foundFinal)
 			}
 			return
+		case "step.failed", "turn.failed", "session.failed":
+			t.Fatalf("official Eve emitted %s: %s", event.Type, event.Data)
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, context.Canceled) {

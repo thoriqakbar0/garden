@@ -20,6 +20,7 @@ a single Go process with local workflow storage and no JavaScript runtime.
 
 ## Compatibility
 
+See the complete [Eve feature matrix](COMPATIBILITY.md) and [test inventory](TESTING.md).
 Compatibility is pinned to the Eve revision in [`UPSTREAM.md`](UPSTREAM.md).
 Official Eve mode is 1:1 by process ownership: the pinned official runtime
 compiles and executes the project itself. Native mode has the narrower contract
@@ -161,6 +162,10 @@ not translate the agent or intercept its protocol: the official runtime owns
 compilation, model calls, durable sessions, routes, authorization, and sandbox
 selection. The process receives the Eve project's environment because authored
 tools and connections may require it.
+
+To prove this path locally without provider credentials or Docker, run
+`make test-official`; it uses the checked-in
+[`examples/eve-parity`](examples/eve-parity) project and the pinned lockfile.
 
 Eve's built-in `bash`, `read_file`, `write_file`, `glob`, and `grep` tools run
 inside Eve's per-session sandbox, not in the Garden process. Choose and secure
@@ -380,9 +385,18 @@ startup instead of being guessed through.
 ## Development
 
 ```sh
-make test
+make test-hermetic
 make check
+make test-official
+make test-all
+make list-tests
 ```
+
+`make test-official` installs the pinned, credential-free
+[`examples/eve-parity`](examples/eve-parity) fixture and proves authored
+TypeScript plus sandbox execution through the official runtime. See
+[`TESTING.md`](TESTING.md) for every test, validation tier, live-provider smoke
+command, and remaining evidence gap.
 
 The hermetic suite covers discovery, the OpenAI-compatible provider, sandboxed
 Codex execution, the native tool loop, protocol-v19 create/continue/stream/cancel,

@@ -25,3 +25,14 @@ in `internal/contracttest/official_test.go`:
 - `EVE_OFFICIAL_CANCELLATION_BASE_URL` targets the official cancellation fixture.
 
 A skipped official target is not differential evidence.
+
+## Credential-free official acceptance
+
+`examples/eve-parity` pins the npm package and uses Eve's authored `mockModel`
+plus `just-bash` sandbox. `make test-official` installs its lockfile and runs
+`TestOfficialEveAuthoredTypeScriptAndSandboxTerminal` without model-provider
+credentials. The test is not skipped in that target and proves the authored
+TypeScript tool, sandbox command, model feedback loop, and waiting boundary.
+
+The external conversation and cancellation URLs above remain separate
+differential targets; they are not implied by the parity fixture.

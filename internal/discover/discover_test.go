@@ -17,6 +17,8 @@ func TestApplicationAtDiscoversFilesystemContract(t *testing.T) {
 	write(t, root, "agent/channels/slack.ts", "")
 	write(t, root, "agent/subagents/reviewer/instructions.md", "")
 	write(t, root, "agent/schedules/daily.ts", `defineSchedule({cron: "0 8 * * *"});`)
+	write(t, root, "agent/schedules/hourly.mjs", `defineSchedule({cron: "0 * * * *"});`)
+	write(t, root, "agent/schedules/reports/weekly.md", "---\ncron: \"0 9 * * 1\"\n---\nWrite the weekly report.\n")
 	write(t, root, "evals/runtime/replay.eval.ts", "")
 
 	app, err := discover.ApplicationAt(root)
@@ -31,8 +33,25 @@ func TestApplicationAtDiscoversFilesystemContract(t *testing.T) {
 	assertOne(t, app.Channels, "slack")
 	assertOne(t, app.Subagents, "reviewer")
 	assertOne(t, app.Evals, "runtime/replay")
-	if len(app.Schedules) != 1 || app.Schedules[0].ID != "daily" || app.Schedules[0].Cron != "0 8 * * *" {
+	if len(app.Schedules) != 3 ||
+		app.Schedules[0].ID != "daily" || app.Schedules[0].Cron != "0 8 * * *" ||
+		app.Schedules[1].ID != "hourly" || app.Schedules[1].Cron != "0 * * * *" ||
+		app.Schedules[1].Path != "agent/schedules/hourly.mjs" ||
+		app.Schedules[2].ID != "reports/weekly" || app.Schedules[2].Cron != "0 9 * * 1" ||
+		app.Schedules[2].Path != "agent/schedules/reports/weekly.md" {
 		t.Fatalf("schedules = %#v", app.Schedules)
+	}
+}
+
+func TestApplicationAtRejectsDuplicateScheduleIDs(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "agent/instructions.md", "Be useful.")
+	write(t, root, "agent/schedules/daily.ts", `defineSchedule({cron: "0 8 * * *"});`)
+	write(t, root, "agent/schedules/daily.md", "---\ncron: \"0 9 * * *\"\n---\nDaily report.\n")
+
+	_, err := discover.ApplicationAt(root)
+	if err == nil || err.Error() != `duplicate schedule id "daily"` {
+		t.Fatalf("error = %v", err)
 	}
 }
 
