@@ -122,8 +122,8 @@ The palette pairs warm, lightly chromatic paper with near-black green ink, then 
 
 ## Typography
 
-**Display Font:** Bricolage Grotesque (with sans-serif fallback)  
-**Body Font:** Manrope (with sans-serif fallback)  
+**Display Font:** Bricolage Grotesque (with sans-serif fallback)
+**Body Font:** Manrope (with sans-serif fallback)
 **Label/Mono Font:** Fira Code (with monospace fallback)
 
 **Character:** Bricolage Grotesque gives the product voice a sturdy, cultivated irregularity without becoming rustic. Manrope keeps explanations direct and highly legible, while Fira Code makes runtime labels, commands, versions, streams, and requirements feel native to the developer workflow.
