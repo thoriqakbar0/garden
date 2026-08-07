@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
-import { BotanicalArt, SpecimenVine } from "./botanical-art";
 import { CopyCommand } from "./copy-command";
-import { DitheredField } from "./dithered-field";
+import { useDitherScale } from "./dither-context";
+import { DitheredField, DitheredTrees } from "./dithered-field";
 
 const githubUrl = "https://github.com/thoriqakbar0/garden";
 
@@ -56,6 +56,14 @@ function GardenMark() {
   );
 }
 
+function EveMark() {
+  return (
+    <svg className="eve-credit-mark" viewBox="0 0 78 25" aria-hidden="true" focusable="false">
+      <path d="M77.7002 3.89551H54.0762L37.5781 24.3818H32.3486L36.5322 19.1729L51.958 0H77.7002V3.89551ZM21.0898 24.3721H0V20.4766H21.0898V24.3721ZM77.7012 20.4766V24.3721H56.6104V20.4766H77.7012ZM17.7744 14.0537H0V10.1582H17.7744V14.0537ZM77.7012 14.0537H59.9268V10.1582H77.7012V14.0537ZM34.7197 3.89551H0V0H34.7197V3.89551Z" />
+    </svg>
+  );
+}
+
 function ArrowIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -74,6 +82,8 @@ function ExternalIcon() {
 
 /** Renders Garden’s primary marketing page. */
 export function Home() {
+  const ditherScale = useDitherScale();
+  const [motionPaused, setMotionPaused] = useState(false);
   const heroStage = useHeroStage();
 
   return (
@@ -95,6 +105,16 @@ export function Home() {
             <a href="#install">Install</a>
           </div>
 
+          <button
+            className="motion-toggle"
+            type="button"
+            data-paused={motionPaused}
+            onClick={() => setMotionPaused((isPaused) => !isPaused)}
+          >
+            <span className="motion-toggle-icon" aria-hidden="true" />
+            <span>{motionPaused ? "Play motion" : "Pause motion"}</span>
+          </button>
+
           <a className="nav-github" href={githubUrl} target="_blank" rel="noreferrer">
             GitHub <ExternalIcon />
           </a>
@@ -103,25 +123,31 @@ export function Home() {
 
       <main id="main-content">
         <section className="hero" id="top">
-          <DitheredField />
-          <BotanicalArt variant="sprout" />
+          <DitheredField ditherScale={ditherScale} paused={motionPaused} />
           <div className="hero-shell">
             <div className={revealClassName("hero-copy", heroStage >= 1)}>
               <h1>
                 <span className="hero-line hero-line-lead">
                   Run{" "}
-                  <span className="hero-eve-lockup">
-                    <a href="https://github.com/vercel/eve" target="_blank" rel="noreferrer">
-                      Eve by Vercel <span aria-hidden="true">↗</span>
+                  <span className="hero-eve-product">
+                    <a
+                      className="hero-eve-credit"
+                      href="https://vercel.com/eve"
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="Eve by Vercel"
+                    >
+                      <span className="hero-eve-word" aria-hidden="true">Eve</span>
+                      <EveMark />
+                      <span className="hero-eve-by">by Vercel <span aria-hidden="true">↗</span></span>
                     </a>
-                    <span>Eve.</span>
-                  </span>
+                  </span>.
                 </span>
                 <span className="hero-line hero-line-promise">Own the runtime.</span>
               </h1>
               <p className="hero-description">
-                Garden runs your project with the official Eve runtime or its
-                smaller native Go runtime. Both run locally. Garden always shows
+                Garden runs your project with the official Eve runtime or the smaller
+                Garden native runtime. Both run locally. Garden always shows
                 which runtime is active.
               </p>
 
@@ -130,19 +156,19 @@ export function Home() {
                   Install Garden <ArrowIcon />
                 </a>
                 <a className="button button-secondary" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">
-                  Read compatibility
+                  Review Eve compatibility
                 </a>
               </div>
 
               <dl className="hero-facts" aria-label="Garden requirements">
                 <div><dt>Official baseline</dt><dd>Eve 0.27.6</dd></div>
-                <div><dt>Native runtime</dt><dd>Single Go process</dd></div>
+                <div><dt>Garden native</dt><dd>Single Go process</dd></div>
                 <div><dt>Hosted service</dt><dd>Not required</dd></div>
               </dl>
             </div>
 
-            <div className={revealClassName("runtime-specimen", heroStage >= 2)} aria-label="One Eve project branching into official and native execution paths">
-              <SpecimenVine />
+            <figure className={revealClassName("runtime-specimen", heroStage >= 2)}>
+              <figcaption className="sr-only">One Eve project branching into the official Eve runtime and Garden native runtime</figcaption>
               <div className="specimen-header">
                 <span>agent/weather</span>
                 <span className="healthy"><i /> discovered</span>
@@ -162,14 +188,14 @@ export function Home() {
 
               <div className="runtime-branches">
                 <div className="branch branch-official">
-                  <span className="branch-label">Full authored behavior</span>
-                  <strong>official Eve</strong>
+                  <span className="branch-label">Full Eve feature set</span>
+                  <strong>Official Eve runtime</strong>
                   <code>--runtime eve</code>
                   <small>TypeScript stays TypeScript</small>
                 </div>
                 <div className="branch branch-native">
-                  <span className="branch-label">Focused local contract</span>
-                  <strong>Garden native</strong>
+                  <span className="branch-label">Smaller local feature set</span>
+                  <strong>Garden native runtime</strong>
                   <code>default</code>
                   <small>One durable Go process</small>
                 </div>
@@ -180,18 +206,18 @@ export function Home() {
                 <code>garden serve --runtime eve</code>
                 <span className="cursor" aria-hidden="true" />
               </div>
-            </div>
+            </figure>
           </div>
         </section>
 
         <section className="runtime-section" id="runtime">
-          <BotanicalArt variant="branches" />
           <div className="section-shell">
             <div className="section-intro">
               <h2>One project. Two paths.</h2>
               <p>
-                Choose official Eve for full authored behavior. Choose Garden
-                native for a smaller Go contract. No silent switch.
+                Choose the official Eve runtime for the full Eve feature set. Choose
+                the Garden native runtime for a smaller local implementation.
+                Garden always shows which runtime is active.
               </p>
             </div>
 
@@ -199,7 +225,7 @@ export function Home() {
               <article className="mode mode-official">
                 <h3>Eve stays Eve.</h3>
                 <div className="mode-topline">
-                  <span>Official mode</span><code>eve@0.27.6</code>
+                  <span>Official Eve runtime</span><code>eve@0.27.6</code>
                 </div>
                 <p>
                   Garden supervises the pinned runtime. Eve keeps compilation,
@@ -207,7 +233,7 @@ export function Home() {
                   sandboxing.
                 </p>
                 <div className="mode-command"><code>garden serve --runtime eve</code></div>
-                <ul aria-label="Official Eve mode characteristics">
+                <ul aria-label="Official Eve runtime characteristics">
                   <li>Authored TypeScript executes unchanged</li>
                   <li>Exact project-local runtime validation</li>
                   <li>Official protocol and session ownership</li>
@@ -221,7 +247,7 @@ export function Home() {
               <article className="mode mode-native">
                 <h3>Less surface. On purpose.</h3>
                 <div className="mode-topline">
-                  <span>Native mode</span><code>garden</code>
+                  <span>Garden native runtime</span><code>garden</code>
                 </div>
                 <p>
                   One Go process owns sessions, streams, model and native-tool
@@ -229,7 +255,7 @@ export function Home() {
                   authored TypeScript.
                 </p>
                 <div className="mode-command"><code>garden serve</code></div>
-                <ul aria-label="Native Garden mode characteristics">
+                <ul aria-label="Garden native runtime characteristics">
                   <li>Codex or OpenAI-compatible models</li>
                   <li>Fsync-backed local workflow history</li>
                   <li>Explicit native capability boundary</li>
@@ -240,7 +266,6 @@ export function Home() {
         </section>
 
         <section className="protocol-section" id="protocol">
-          <BotanicalArt variant="seedPods" />
           <div className="protocol-shell">
             <div className="protocol-copy">
               <h2>Watch the boundary.</h2>
@@ -254,7 +279,8 @@ export function Home() {
               </a>
             </div>
 
-            <div className="event-field" aria-label="Example Garden event stream">
+            <figure className="event-field">
+              <figcaption className="sr-only">Example Garden event stream</figcaption>
               <div className="event-field-head">
                 <span>session stream</span>
                 <span><i /> live</span>
@@ -267,14 +293,16 @@ export function Home() {
                 <li><span>005</span><code>message.completed</code><small>assistant</small></li>
                 <li><span>006</span><code>session.waiting</code><small>continuable</small></li>
               </ol>
-            </div>
+            </figure>
           </div>
         </section>
 
         <section className="principles-section" aria-labelledby="principles-title">
-          <BotanicalArt variant="leafCluster" />
           <div className="section-shell principles-shell">
-            <h2 id="principles-title">Real work. Clear evidence.</h2>
+            <div className="principles-intro">
+              <h2 id="principles-title">Real work. Clear evidence.</h2>
+              <DitheredTrees ditherScale={ditherScale} paused={motionPaused} />
+            </div>
             <div className="principle-list">
               <article>
                 <span className="principle-mark" aria-hidden="true" />
@@ -289,14 +317,13 @@ export function Home() {
               <article>
                 <span className="principle-mark" aria-hidden="true" />
                 <h3>Name the boundary</h3>
-                <p>Official delegates to Eve. Native runs the supported Go contract. You always know which path is live.</p>
+                <p>The official Eve runtime runs the full Eve feature set. The Garden native runtime runs Garden’s supported Go feature set. Garden always shows which runtime is active.</p>
               </article>
             </div>
           </div>
         </section>
 
         <section className="install-section" id="install">
-          <BotanicalArt variant="roots" />
           <div className="install-shell">
             <div className="install-copy">
               <h2>Your machine. Your runtime.</h2>
@@ -312,17 +339,21 @@ export function Home() {
             </div>
 
             <div className="install-terminal">
-              <div className="terminal-title"><span>Install from source</span><span>shell</span></div>
-              <CopyCommand command="git clone https://github.com/thoriqakbar0/garden.git" />
-              <div className="terminal-line"><span>$</span><code>cd garden</code></div>
-              <div className="terminal-line"><span>$</span><code>make install</code></div>
-              <div className="terminal-line terminal-result"><span>[ok]</span><code>~/.local/bin/garden</code></div>
+              <div className="terminal-title"><span>Install, then run native</span><span>shell</span></div>
+              <div className="install-step">
+                <span className="install-step-label"><i>1</i> Install Garden</span>
+                <CopyCommand command="git clone https://github.com/thoriqakbar0/garden.git && cd garden && make install" />
+              </div>
+              <div className="install-step">
+                <span className="install-step-label"><i>2</i> Run the Garden native runtime</span>
+                <CopyCommand command="garden serve --root /path/to/eve-project" />
+              </div>
+              <div className="terminal-line terminal-result"><span>[live]</span><code>http://127.0.0.1:3000</code></div>
             </div>
           </div>
         </section>
 
         <section className="closing-section">
-          <BotanicalArt variant="bloom" />
           <div className="closing-shell">
             <div className="closing-mark" aria-hidden="true"><GardenMark /></div>
             <h2>Eve stays Eve.<br />Garden starts where you choose.</h2>

@@ -32,7 +32,7 @@
       "forest": {
         "role": "primary",
         "displayName": "Forest",
-        "canonical": "oklch(0.285 0.085 148)"
+        "canonical": "oklch(0.285 0.082 148)"
       },
       "forest-deep": {
         "role": "primary",
@@ -131,14 +131,14 @@
         "purpose": "Settles the hero copy and runtime specimen in two restrained groups."
       },
       {
-        "name": "botanical-scroll",
-        "value": "CSS view timeline, entry through cover",
-        "purpose": "Draws stems and unfurls section-specific botanical artwork with scroll progress."
+        "name": "landscape-dither",
+        "value": "requestVideoFrameCallback while intersecting; DialKit ditherScale 1–12",
+        "purpose": "Uploads decoded wheat and treetop frames to one tunable ordered-dither shader; pauses outside each section or from the shared motion control."
       },
       {
-        "name": "field-dither",
-        "value": "requestVideoFrameCallback while intersecting",
-        "purpose": "Uploads each decoded wheat-field frame to the ordered-dither shader and pauses outside the hero."
+        "name": "eve-mark-glitch",
+        "value": "420ms steps(2, end), hover/focus only",
+        "purpose": "Briefly glitches the inline official Eve mark; disabled under reduced motion."
       },
       {
         "name": "cursor-blink",
@@ -229,14 +229,15 @@
   ],
   "narrative": {
     "northStar": "Cultivated systems",
-    "overview": "Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Botanical imagery is meaning-bearing: each major section receives one illustration whose form mirrors its job, from the hero sprout and branching runtimes to protocol seed pods, install roots, and the closing bloom.\n\nThe composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Behind both, licensed wheat-field footage moves through a Garden-colored ordered-dither shader, turning the product metaphor into a living field without reducing text contrast. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.",
+    "overview": "Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Natural footage carries the botanical atmosphere; CSS stems, nodes, and leaf marks explain runtime relationships without relying on disconnected decorative SVG illustrations.\n\nThe composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Licensed wheat and treetop footage moves through one tunable Garden-colored ordered-dither shader without reducing text contrast. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.",
     "keyCharacteristics": [
       "Warm field-note parchment with deep forest ink",
       "Acid-leaf signals reserved for status, action, and branching",
       "Botanical forms used as information geometry",
-      "Dithered wheat-field motion with a static reduced-motion fallback",
+      "Tunable dithered wheat and treetop motion with static reduced-motion fallbacks",
       "Asymmetric editorial layouts paired with precise runtime specimens",
-      "Clear visual separation between official Eve ownership and Garden native ownership"
+      "Clear visual separation between official Eve ownership and Garden native ownership",
+      "Official Eve provenance integrated directly into the hero headline"
     ],
     "rules": [],
     "dos": [
@@ -244,12 +245,12 @@
       "Do reserve acid leaf for status, action, active evidence, and botanical connectors.",
       "Do make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.",
       "Do use stems, nodes, and leaf marks to explain relationships and runtime branching.",
-      "Do give every major section one botanical composition whose form reflects that section’s meaning.",
+      "Do use botanical or landscape imagery only where it reflects the section’s meaning; prefer footage and CSS geometry over standalone decorative SVGs.",
       "Do preserve visible focus, reduced-motion behavior, and the documented 320px reflow."
     ],
     "donts": [
       "Don't center the first viewport into a generic SaaS hero or replace the runtime specimen with a feature-card grid.",
-      "Don't add botanical imagery without a section-specific role or let it obscure product content.",
+      "Don't add disconnected botanical SVG decoration or let landscape media obscure product content.",
       "Don't style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.",
       "Don't use acid leaf as a broad background or routine body-text color.",
       "Don't fabricate hosted-service, deployment, benchmark, customer, or compatibility claims."

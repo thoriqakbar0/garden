@@ -16,11 +16,13 @@ const FIELD_DITHER_FRAGMENT_SHADER = `
 
   uniform sampler2D u_image;
   uniform vec2 u_resolution;
+  uniform float u_ditherScale;
   varying vec2 v_texCoord;
 
   float orderedThreshold(vec2 position) {
-    int x = int(mod(position.x, 4.0));
-    int y = int(mod(position.y, 4.0));
+    vec2 ditherPosition = floor(position / max(u_ditherScale, 1.0));
+    int x = int(mod(ditherPosition.x, 4.0));
+    int y = int(mod(ditherPosition.y, 4.0));
     int index = y * 4 + x;
     float thresholds[16];
     thresholds[0] = 0.0;
@@ -55,13 +57,11 @@ const FIELD_DITHER_FRAGMENT_SHADER = `
     gray = clamp(gray * 1.22 - 0.12, 0.0, 1.0);
 
     float threshold = orderedThreshold(gl_FragCoord.xy);
-    float mark = step(threshold, gray);
+    float mark = 1.0 - step(threshold, gray);
     vec3 paper = vec3(0.973, 0.965, 0.902);
-    vec3 moss = vec3(0.16, 0.32, 0.15);
-    vec3 leaf = vec3(0.69, 0.76, 0.31);
-    vec3 ink = mix(moss, leaf, smoothstep(0.42, 0.88, gray));
+    vec3 forest = vec3(0.16, 0.32, 0.15);
 
-    gl_FragColor = vec4(mix(paper, ink, mark), 1.0);
+    gl_FragColor = vec4(mix(paper, forest, mark), 1.0);
   }
 `;
 
@@ -130,10 +130,31 @@ function sourceSize(source: FieldSource): Readonly<{ width: number; height: numb
   return { width: source.naturalWidth, height: source.naturalHeight };
 }
 
-/** Renders local wheat-field footage through a Garden-colored dither shader. */
-export function DitheredField() {
+type DitheredVideoProps = Readonly<{
+  className: string;
+  ditherScale: number;
+  paused: boolean;
+  poster: string;
+  sources: ReadonlyArray<Readonly<{ src: string; type: string }>>;
+}>;
+
+function DitheredVideo({ className, ditherScale, paused, poster, sources }: DitheredVideoProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const ditherScaleRef = useRef(ditherScale);
+  const pausedRef = useRef(paused);
+  const renderRef = useRef<(() => void) | null>(null);
+  const syncPlaybackRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    ditherScaleRef.current = ditherScale;
+    renderRef.current?.();
+  }, [ditherScale]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    syncPlaybackRef.current?.();
+  }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -172,6 +193,7 @@ export function DitheredField() {
     const positionLocation = gl.getAttribLocation(program, "a_position");
     const textureCoordinateLocation = gl.getAttribLocation(program, "a_texCoord");
     const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+    const ditherScaleLocation = gl.getUniformLocation(program, "u_ditherScale");
     const imageLocation = gl.getUniformLocation(program, "u_image");
 
     gl.useProgram(program);
@@ -194,7 +216,7 @@ export function DitheredField() {
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const fallbackImage = new Image();
-    fallbackImage.src = "/media/field-wind-poster.jpg";
+    fallbackImage.src = poster;
 
     let currentSource: FieldSource | null = null;
     let videoFrameId: number | null = null;
@@ -255,6 +277,7 @@ export function DitheredField() {
       }
 
       gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform1f(ditherScaleLocation, ditherScaleRef.current);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
       gl.texImage2D(
         gl.TEXTURE_2D,
@@ -268,9 +291,12 @@ export function DitheredField() {
       canvas.dataset.renderState = "ready";
     };
 
+    renderRef.current = render;
+
     const shouldRenderVideo = () =>
       currentSource === video &&
       !video.paused &&
+      !pausedRef.current &&
       isVisible &&
       !reducedMotion.matches &&
       !isDisposed;
@@ -293,7 +319,7 @@ export function DitheredField() {
     };
 
     const startVideo = () => {
-      if (isDisposed || !isVisible || reducedMotion.matches) return;
+      if (isDisposed || !isVisible || pausedRef.current || reducedMotion.matches) return;
 
       if (!video.paused) {
         if (currentSource !== video && configureCanvas(video)) render();
@@ -324,6 +350,18 @@ export function DitheredField() {
         render();
       }
     };
+
+    const syncPlayback = () => {
+      if (pausedRef.current) {
+        cancelVideoFrame();
+        video.pause();
+        return;
+      }
+      if (reducedMotion.matches) showFallback();
+      else startVideo();
+    };
+
+    syncPlaybackRef.current = syncPlayback;
 
     const handleMotionChange = () => {
       if (reducedMotion.matches) showFallback();
@@ -375,21 +413,58 @@ export function DitheredField() {
       reducedMotion.removeEventListener("change", handleMotionChange);
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
+      renderRef.current = null;
+      syncPlaybackRef.current = null;
       delete canvas.dataset.renderState;
       gl.deleteTexture(texture);
       gl.deleteBuffer(positionBuffer);
       gl.deleteBuffer(textureCoordinateBuffer);
       gl.deleteProgram(program);
     };
-  }, []);
+  }, [poster]);
 
   return (
-    <div className="hero-field" aria-hidden="true">
+    <div className={className} aria-hidden="true">
       <canvas ref={canvasRef} />
       <video ref={videoRef} muted loop playsInline preload="metadata" tabIndex={-1}>
-        <source src="/media/field-wind.webm" type="video/webm" />
-        <source src="/media/field-wind.mp4" type="video/mp4" />
+        {sources.map((source) => <source key={source.src} src={source.src} type={source.type} />)}
       </video>
     </div>
+  );
+}
+
+const FIELD_SOURCES = [
+  { src: "/media/field-wind.webm", type: "video/webm" },
+  { src: "/media/field-wind.mp4", type: "video/mp4" },
+] as const;
+
+const TREE_SOURCES = [
+  { src: "/media/trees-wind.webm", type: "video/webm" },
+  { src: "/media/trees-wind.mp4", type: "video/mp4" },
+] as const;
+
+/** Renders local wheat-field footage through a Garden-colored dither shader. */
+export function DitheredField({ ditherScale, paused }: Readonly<{ ditherScale: number; paused: boolean }>) {
+  return (
+    <DitheredVideo
+      className="hero-field"
+      ditherScale={ditherScale}
+      paused={paused}
+      poster="/media/field-wind-poster.jpg"
+      sources={FIELD_SOURCES}
+    />
+  );
+}
+
+/** Renders local tree footage through the same tunable dither shader. */
+export function DitheredTrees({ ditherScale, paused }: Readonly<{ ditherScale: number; paused: boolean }>) {
+  return (
+    <DitheredVideo
+      className="principles-field"
+      ditherScale={ditherScale}
+      paused={paused}
+      poster="/media/trees-wind-poster.jpg"
+      sources={TREE_SOURCES}
+    />
   );
 }

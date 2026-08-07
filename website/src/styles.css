@@ -11,7 +11,7 @@
   --paper-bright: oklch(0.992 0.007 95);
   --ink: oklch(0.225 0.04 147);
   --ink-soft: oklch(0.405 0.036 145);
-  --forest: oklch(0.285 0.085 148);
+  --forest: oklch(0.285 0.082 148);
   --forest-deep: oklch(0.205 0.055 150);
   --moss: oklch(0.48 0.105 139);
   --leaf: oklch(0.82 0.155 116);
@@ -24,6 +24,8 @@
   --radius-sm: 0.65rem;
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
+  --text-caption: 0.75rem;
+  --specimen-padding: 1.1rem;
 }
 
 * {
@@ -31,8 +33,13 @@
 }
 
 html {
-  scroll-behavior: smooth;
   scroll-padding-top: 6rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
@@ -157,6 +164,7 @@ svg {
 }
 
 .nav-links a,
+.motion-toggle,
 .nav-github {
   min-height: 2.75rem;
   display: inline-flex;
@@ -170,6 +178,7 @@ svg {
 }
 
 .nav-links a:hover,
+.motion-toggle:hover,
 .nav-github:hover {
   color: var(--forest);
 }
@@ -187,7 +196,32 @@ svg {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.7;
+  stroke-width: 2;
+}
+
+.motion-toggle {
+  padding-inline: 0.7rem;
+  gap: 0.5rem;
+  color: var(--forest);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.motion-toggle-icon {
+  width: 0.65rem;
+  height: 0.75rem;
+  border-inline: 2px solid currentColor;
+}
+
+.motion-toggle[data-paused="true"] .motion-toggle-icon {
+  width: 0;
+  height: 0;
+  border-block: 0.4rem solid transparent;
+  border-inline-start: 0.65rem solid currentColor;
+  border-inline-end: 0;
 }
 
 .hero {
@@ -240,7 +274,8 @@ svg {
   opacity: 1;
 }
 
-.hero-field video {
+.hero-field video,
+.principles-field video {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -248,87 +283,37 @@ svg {
   pointer-events: none;
 }
 
-/* Botanical illustrations are decorative images. Their growth is tied to scroll
-   progress when the browser supports view timelines. */
-.botanical-art {
-  position: absolute;
-  z-index: 0;
-  display: block;
-  overflow: visible;
+.principles-intro {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.72fr) minmax(24rem, 1.28fr);
+  align-items: center;
+  gap: clamp(3rem, 8vw, 8rem);
+}
+
+.principles-field {
+  position: relative;
+  min-height: clamp(15rem, 28vw, 22rem);
+  overflow: hidden;
   pointer-events: none;
-  color: var(--moss);
-  opacity: 0.34;
+  background: url("/media/trees-wind-poster.jpg") center / cover;
+  mask-image:
+    linear-gradient(90deg, transparent, black 18%, black 88%, transparent),
+    linear-gradient(0deg, transparent, black 16%, black 90%, transparent);
+  mask-composite: intersect;
 }
 
-.botanical-stem,
-.botanical-leaf,
-.botanical-petal,
-.botanical-seed {
-  vector-effect: non-scaling-stroke;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.principles-field canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  opacity: 0;
+  image-rendering: pixelated;
+  transition: opacity 240ms ease-out;
 }
 
-.botanical-stem {
-  fill: none;
-  stroke-width: 1.8;
-}
-
-.botanical-leaf {
-  fill: var(--leaf-soft);
-  stroke-width: 1.3;
-}
-
-.botanical-petal {
-  fill: oklch(0.88 0.115 104 / 0.72);
-  stroke-width: 1.3;
-}
-
-.botanical-seed {
-  fill: var(--clay);
-  stroke-width: 1.1;
-}
-
-.botanical-sprout {
-  inset-block-end: -2.5rem;
-  inset-inline-start: max(0.5rem, calc((100vw - 76rem) / 2 - 5rem));
-  width: 12rem;
-}
-
-.botanical-branches {
-  inset-block-start: 3rem;
-  inset-inline-end: -2rem;
-  width: 19rem;
-}
-
-.botanical-seedPods {
-  inset-block-end: -3rem;
-  inset-inline-start: -2.5rem;
-  width: 18rem;
-  color: var(--leaf);
-  opacity: 0.22;
-}
-
-.botanical-leafCluster {
-  inset-block-start: 1rem;
-  inset-inline-end: 1rem;
-  width: 15rem;
-}
-
-.botanical-roots {
-  inset-block-end: -4.5rem;
-  inset-inline-start: -2rem;
-  width: 20rem;
-}
-
-.botanical-bloom {
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  width: 31rem;
-  color: var(--moss);
-  opacity: 0.16;
-  transform: translate(-50%, -50%);
+.principles-field canvas[data-render-state="ready"] {
+  opacity: 1;
 }
 
 .runtime-section,
@@ -361,7 +346,7 @@ svg {
 .hero-copy h1,
 .section-intro h2,
 .protocol-copy h2,
-.principles-shell > h2,
+.principles-intro > h2,
 .install-copy h2,
 .closing-shell h2 {
   margin: 0;
@@ -377,32 +362,94 @@ svg {
   line-height: 0.95;
 }
 
-.hero-eve-lockup {
+.hero-line {
+  display: block;
+}
+
+.hero-eve-product {
   position: relative;
   display: inline-block;
 }
 
-.hero-eve-lockup > a {
+.hero-eve-credit {
+  position: relative;
+  display: block;
+  color: inherit;
+  line-height: inherit;
+  text-decoration: none;
+}
+
+.hero-eve-word {
+  display: block;
+}
+
+.hero-eve-by {
   position: absolute;
-  inset-block-end: calc(100% + 0.45rem);
-  inset-inline-start: 0.18em;
+  inset-block-start: 0.2rem;
+  inset-inline-start: calc(100% - 1.4rem);
   color: var(--forest);
   font-family: var(--font-mono), monospace;
-  font-size: 0.11em;
+  font-size: clamp(0.75rem, 0.9vw, 0.875rem);
   font-weight: 650;
   letter-spacing: 0.05em;
   line-height: 1;
-  text-decoration: none;
   white-space: nowrap;
 }
 
-.hero-eve-lockup > a:hover {
+.hero-eve-by::before {
+  content: "";
+  position: absolute;
+  inset: -0.75rem -0.5rem;
+}
+
+.hero-eve-credit:hover .hero-eve-by {
   text-decoration: underline;
   text-underline-offset: 0.25em;
 }
 
-.hero-line {
-  display: block;
+.eve-credit-mark {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 0;
+  width: 100%;
+  height: auto;
+  fill: var(--forest);
+  opacity: 0;
+  overflow: visible;
+  transform: translateY(-50%);
+  transform-origin: center;
+}
+
+.hero-eve-credit:is(:hover, :focus-visible) .hero-eve-word {
+  animation: eve-word-glitch 420ms steps(2, end) 1;
+}
+
+.hero-eve-credit:is(:hover, :focus-visible) .eve-credit-mark {
+  animation: eve-mark-glitch 420ms steps(2, end) 1;
+}
+
+@keyframes eve-word-glitch {
+  0%, 16%, 42%, 68%, 100% { opacity: 1; transform: translate(0); }
+  17%, 41% { opacity: 0; transform: translate(-1px, 0.5px); }
+  69%, 82% { opacity: 0; transform: translate(1px, -0.5px); }
+}
+
+@keyframes eve-mark-glitch {
+  0%, 16%, 42%, 68%, 83%, 100% {
+    filter: none;
+    opacity: 0;
+    transform: translateY(-50%);
+  }
+  17%, 41% {
+    filter: drop-shadow(2px 0 var(--leaf)) drop-shadow(-2px 0 var(--clay));
+    opacity: 1;
+    transform: translate(-1px, calc(-50% + 0.5px)) skewX(-4deg);
+  }
+  69%, 82% {
+    filter: drop-shadow(-2px 0 var(--leaf)) drop-shadow(2px 0 var(--clay));
+    opacity: 1;
+    transform: translate(1px, calc(-50% - 0.5px)) skewX(3deg);
+  }
 }
 
 .hero-line-lead {
@@ -491,7 +538,7 @@ svg {
 .terminal-title {
   color: var(--ink-soft);
   font-family: var(--font-mono), monospace;
-  font-size: 0.67rem;
+  font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: 0.08em;
   line-height: 1.4;
@@ -507,45 +554,11 @@ svg {
 
 .runtime-specimen {
   position: relative;
-  padding: 1.1rem;
+  margin: 0;
+  padding: var(--specimen-padding);
   background: oklch(0.99 0.008 96 / 0.92);
-  border-radius: var(--radius-lg);
+  border-radius: calc(var(--radius-md) + var(--specimen-padding));
   box-shadow: var(--shadow);
-}
-
-.specimen-vine {
-  position: absolute;
-  z-index: 2;
-  inset: -1.15rem;
-  width: calc(100% + 2.3rem);
-  height: calc(100% + 2.3rem);
-  overflow: visible;
-  pointer-events: none;
-}
-
-.specimen-vine-stem,
-.specimen-vine-leaf {
-  stroke: var(--moss);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.specimen-vine-stem {
-  fill: none;
-  stroke-width: 1.3;
-}
-
-.specimen-vine-leaf {
-  fill: oklch(0.9 0.085 112 / 0.72);
-  stroke-width: 1;
-}
-
-.specimen-vine-berry {
-  fill: var(--leaf);
-  stroke: var(--forest);
-  stroke-width: 0.8;
-  vector-effect: non-scaling-stroke;
 }
 
 .specimen-header {
@@ -555,7 +568,7 @@ svg {
   padding: 0.15rem 0.25rem 1rem;
   color: var(--ink-soft);
   font-family: var(--font-mono), monospace;
-  font-size: 0.7rem;
+  font-size: var(--text-caption);
 }
 
 .healthy {
@@ -595,7 +608,7 @@ svg {
   gap: 0.2rem;
   color: var(--ink-soft);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: var(--text-caption);
   list-style: none;
 }
 
@@ -680,7 +693,7 @@ svg {
 
 .runtime-specimen .branch-label,
 .runtime-specimen .folder-tab {
-  font-size: 0.72rem;
+  font-size: var(--text-caption);
 }
 
 .branch-native .branch-label {
@@ -699,7 +712,7 @@ svg {
   margin-block-start: 0.65rem;
   padding: 0.25rem 0.45rem;
   font-family: var(--font-mono), monospace;
-  font-size: 0.67rem;
+  font-size: var(--text-caption);
   background: oklch(1 0 0 / 0.12);
   border-radius: 0.3rem;
 }
@@ -711,7 +724,7 @@ svg {
 .branch small {
   margin-block-start: auto;
   color: var(--ink-soft);
-  font-size: 0.72rem;
+  font-size: var(--text-caption);
 }
 
 .specimen-command {
@@ -758,7 +771,7 @@ svg {
 
 .section-intro h2,
 .protocol-copy h2,
-.principles-shell > h2,
+.principles-intro > h2,
 .install-copy h2,
 .closing-shell h2 {
   max-width: 16ch;
@@ -834,7 +847,7 @@ svg {
 
 .mode-topline code {
   font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
+  font-size: var(--text-caption);
 }
 
 .mode-official .mode-topline span,
@@ -931,7 +944,7 @@ svg {
   color: var(--ink-soft);
   background: transparent;
   font-family: var(--font-mono), monospace;
-  font-size: 0.62rem;
+  font-size: var(--text-caption);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   writing-mode: vertical-rl;
@@ -1001,6 +1014,7 @@ svg {
 }
 
 .event-field {
+  margin: 0;
   overflow: hidden;
   background: oklch(0.16 0.035 150 / 0.8);
   border-radius: var(--radius-lg);
@@ -1047,7 +1061,7 @@ svg {
 
 .event-field li > span {
   color: oklch(0.92 0.03 110 / 0.7);
-  font-size: 0.64rem;
+  font-size: var(--text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1058,7 +1072,7 @@ svg {
 
 .event-field small {
   color: oklch(0.92 0.03 110 / 0.72);
-  font-size: 0.65rem;
+  font-size: var(--text-caption);
   overflow-wrap: anywhere;
 }
 
@@ -1071,19 +1085,14 @@ svg {
   color: var(--leaf);
 }
 
-.principles-shell {
-  display: grid;
-  grid-template-columns: minmax(18rem, 0.65fr) minmax(0, 1fr);
-  gap: clamp(3rem, 8vw, 8rem);
-}
-
-.principles-shell > h2 {
+.principles-intro > h2 {
   max-width: 12ch;
   font-size: clamp(2.5rem, 4.5vw, 4rem);
 }
 
 .principle-list {
   display: grid;
+  margin-block-start: clamp(3rem, 6vw, 5rem);
 }
 
 .principle-list article {
@@ -1158,7 +1167,7 @@ svg {
   background: oklch(0.99 0.007 96 / 0.65);
   border-radius: 999px;
   font-family: var(--font-mono), monospace;
-  font-size: 0.63rem;
+  font-size: var(--text-caption);
 }
 
 .install-terminal {
@@ -1179,6 +1188,39 @@ svg {
   border-block-end: 1px solid oklch(0.9 0.05 110 / 0.1);
 }
 
+.install-step {
+  border-block-end: 1px solid oklch(0.9 0.05 110 / 0.1);
+}
+
+.install-step-label {
+  display: flex;
+  padding: 1.1rem 1.4rem 0.25rem;
+  align-items: center;
+  gap: 0.65rem;
+  color: oklch(0.92 0.025 110 / 0.72);
+  font-family: var(--font-mono), monospace;
+  font-size: var(--text-caption);
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.install-step-label i {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--forest-deep);
+  background: var(--leaf);
+  border-radius: 50%;
+  font-style: normal;
+  place-items: center;
+}
+
+.install-step .copy-command {
+  min-height: 3.75rem;
+  border-block-end: 0;
+}
+
 .copy-command,
 .terminal-line {
   display: grid;
@@ -1194,7 +1236,7 @@ svg {
 .copy-command code,
 .terminal-line code {
   overflow-wrap: anywhere;
-  font-size: 0.7rem;
+  font-size: var(--text-caption);
 }
 
 .copy-command button {
@@ -1227,12 +1269,17 @@ svg {
 .terminal-line > span {
   color: var(--leaf);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: var(--text-caption);
 }
 
 .terminal-result {
+  grid-template-columns: auto minmax(0, 1fr);
   color: oklch(0.9 0.03 110 / 0.55);
   border-block-end: 0;
+}
+
+.terminal-result code {
+  text-align: end;
 }
 
 .closing-section {
@@ -1331,7 +1378,7 @@ footer {
   min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: var(--text-caption);
   font-weight: 650;
 }
 
@@ -1345,50 +1392,6 @@ footer {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .botanical-art {
-      animation: botanical-drift linear both;
-      animation-timeline: view(block);
-      animation-range: entry 0% exit 100%;
-    }
-
-    .botanical-stem {
-      stroke-dasharray: 1;
-      stroke-dashoffset: 1;
-      animation: botanical-draw linear both;
-      animation-timeline: view(block);
-      animation-range: entry 5% cover 55%;
-    }
-
-    .botanical-leaf,
-    .botanical-petal,
-    .botanical-seed {
-      opacity: 0;
-      transform: scale(0.55) rotate(-4deg);
-      transform-box: fill-box;
-      transform-origin: center;
-      animation: botanical-unfurl linear both;
-      animation-timeline: view(block);
-      animation-range: entry 18% cover 58%;
-    }
-  }
-}
-
-@keyframes botanical-draw {
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes botanical-unfurl {
-  55% { opacity: 0.65; }
-  to { opacity: 1; transform: scale(1) rotate(0); }
-}
-
-@keyframes botanical-drift {
-  from { translate: 0 1.2rem; }
-  to { translate: 0 -1.2rem; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1452,7 +1455,16 @@ footer {
   .site-header { padding-block: 0.9rem; }
   .nav-shell { gap: 1rem; }
   .nav-links { display: none; }
-  .nav-github { margin-inline-start: auto; }
+  .motion-toggle {
+    min-inline-size: 2.75rem;
+    margin-inline-start: auto;
+    justify-content: center;
+  }
+  .nav-github {
+    min-inline-size: 2.75rem;
+    margin-inline-start: 0;
+    justify-content: center;
+  }
 
   .hero {
     padding-block: 8rem 4.5rem;
@@ -1460,42 +1472,33 @@ footer {
 
   .hero::before { display: none; }
   .hero-field {
-    opacity: 0.48;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 62%, transparent 96%);
+    opacity: 0.38;
+    mask-image: linear-gradient(to bottom, transparent 0%, transparent 26%, black 52%, black 78%, transparent 96%);
   }
   .hero-shell {
     row-gap: 0;
   }
 
-  .hero-copy {
-    display: contents;
-  }
-
   .hero-copy h1 {
-    order: 1;
     max-width: 12ch;
     font-size: clamp(2.9rem, 12.8vw, 3.45rem);
   }
 
   .hero-description {
-    order: 2;
     margin-block-start: 1.1rem;
-    font-size: 0.96rem;
+    font-size: 1rem;
   }
 
   .hero-actions {
-    order: 3;
     margin-block-start: 1.15rem;
   }
 
   .runtime-specimen {
-    order: 4;
+    --specimen-padding: 0.8rem;
     margin-block-start: 0.75rem;
-    padding: 0.8rem;
   }
 
   .hero-facts {
-    order: 5;
     gap: 1rem 1.5rem;
     margin-block-start: 1.5rem;
   }
@@ -1508,8 +1511,12 @@ footer {
   .specimen-command code { overflow-wrap: anywhere; }
 
   .section-intro,
-  .principles-shell {
+  .principles-intro {
     grid-template-columns: 1fr;
+  }
+
+  .principles-field {
+    min-height: 15rem;
   }
 
   .runtime-landscape {
@@ -1554,6 +1561,7 @@ footer {
 }
 
 @media (max-width: 31rem) {
+  .motion-toggle > span:last-child { display: none; }
   .nav-github { font-size: 0; gap: 0; }
   .nav-github svg { width: 1.25rem; }
   .closing-actions { align-items: stretch; flex-direction: column; }
@@ -1575,4 +1583,19 @@ footer {
   .terminal-line { padding-inline: 1rem; }
   .copy-command { grid-template-columns: 1fr; padding-block: 0.8rem; }
   .copy-command button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-toggle {
+    display: none;
+  }
+
+  .hero-eve-credit:is(:hover, :focus-visible) .hero-eve-word,
+  .hero-eve-credit:is(:hover, :focus-visible) .eve-credit-mark {
+    animation: none;
+  }
+
+  .eve-credit-mark {
+    opacity: 0;
+  }
 }

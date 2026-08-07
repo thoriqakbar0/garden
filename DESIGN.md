@@ -7,7 +7,7 @@ colors:
   field-paper-bright: "oklch(0.992 0.007 95)"
   forest-ink: "oklch(0.225 0.04 147)"
   forest-ink-soft: "oklch(0.405 0.036 145)"
-  forest: "oklch(0.285 0.085 148)"
+  forest: "oklch(0.285 0.082 148)"
   forest-deep: "oklch(0.205 0.055 150)"
   moss: "oklch(0.48 0.105 139)"
   acid-leaf: "oklch(0.82 0.155 116)"
@@ -87,7 +87,7 @@ components:
 
 **Creative North Star: "Cultivated systems"**
 
-Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Botanical imagery is meaning-bearing: each major section receives one illustration whose form mirrors its job, from the hero sprout and branching runtimes to protocol seed pods, install roots, and the closing bloom.
+Garden looks like precise runtime infrastructure recorded in a cultivated field notebook. Warm parchment surfaces and forest ink keep the page grounded; acid-leaf signals call attention to live state, action, and branching. Natural footage carries the botanical atmosphere; CSS stems, nodes, and leaf marks explain runtime relationships without relying on disconnected decorative SVG illustrations.
 
 The composition is technical and restrained rather than generic SaaS. Its first viewport is deliberately asymmetric: a left-anchored promise shares the frame with a substantial branching runtime specimen. Behind both, licensed wheat-field footage moves through a Garden-colored ordered-dither shader, turning the product metaphor into a living field without reducing text contrast. Dense protocol and terminal details use the same visual world as the marketing copy, so evidence and product claims feel continuous.
 
@@ -136,6 +136,7 @@ The palette pairs warm, lightly chromatic paper with near-black green ink, then 
 - **Body** (400, base reading size, 1.6 line-height): Used for explanations, with restrained measures and softened ink for supporting copy.
 - **Technical Label** (600, compact mono scale, 0.08em tracking, uppercase): Used for mode labels, specimen tabs, terminal headings, and other operational metadata.
 - **Action** (750, compact body scale): Used for buttons and prominent links.
+- **Origin credit** (Fira Code, 12–14px): The official Eve mark and “by Vercel” sit inside the “Run Eve.” headline. The mark glitches once on hover or keyboard focus and stays static under reduced motion.
 
 ## Layout
 
@@ -184,22 +185,23 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Style:** The brand combines a Bricolage Grotesque wordmark with a seed-shaped forest mark. Links are compact, semibold Manrope in soft ink and become forest on hover. The GitHub link remains forest and includes an external-link glyph.
 - **Mobile:** Section links hide at 48rem while GitHub remains. Below 31rem its word label hides and the icon retains the control.
 
-### Dithered Field
-- **Style:** Locally hosted wheat footage is sampled frame by frame through a forest, leaf, and paper ordered-dither shader. A left-to-right paper mask protects headline contrast.
-- **Lifecycle:** Rendering follows `requestVideoFrameCallback`, pauses outside the hero, owns WebGL cleanup, and falls back to a dithered poster frame when motion is reduced or playback is unavailable.
-- **Attribution:** The adapted CC BY 3.0 footage and changes are documented in `THIRD_PARTY_NOTICES.md`.
+### Dithered Landscapes
+- **Style:** Locally hosted wheat and treetop footage is sampled frame by frame through one low-chroma forest-and-paper ordered-dither shader. The wheat field sits behind the hero; treetops replace the SVG illustration in the evidence section.
+- **Tuning:** DialKit exposes a shared `ditherScale` control from 1–12 in development so both landscapes can be tuned together.
+- **Lifecycle:** Each landscape uses `requestVideoFrameCallback`, pauses outside its section, owns WebGL cleanup, and falls back to a dithered poster frame when motion is reduced or playback is unavailable. A shared navigation control pauses or resumes both videos.
+- **Attribution:** The adapted CC BY 3.0 wheat footage, CC BY 4.0 treetop footage, and changes are documented in `THIRD_PARTY_NOTICES.md`.
 
 ### Runtime Branch Specimen
-- **Style:** A bright-paper raised container shows one recessed Eve-shaped source bed, a moss stem, two runtime branches, and a quiet vine following its outside border.
+- **Style:** A bright-paper raised container shows one recessed Eve-shaped source bed, a moss stem, and two runtime branches. Keep its outside border clean.
 - **Ownership:** The official branch is forest with bright text; the native branch is soft acid leaf with ink text. Their labels and commands stay explicit.
-- **Motion:** Hero content enters in two restrained grouped settles. The command cursor blinks independently. Section illustrations use CSS view timelines to draw stems and unfurl leaves as their sections move through the viewport; reduced-motion users receive the complete static artwork.
+- **Motion:** Hero content enters in two restrained grouped settles. The command cursor blinks independently. Dithered landscape video pauses outside its section, and reduced-motion users receive the complete static poster artwork.
 
 ### Event Stream
 - **Style:** A deep-forest ordered list uses mono event names, tabular sequence numbers, quiet row separators, and a bright live-status dot.
 - **Accent:** Only the active result row receives an acid-leaf wash and acid-leaf text.
 
 ### Install Terminal
-- **Style:** A deep-forest terminal presents command rows with leaf-colored prompts and compact Fira Code text.
+- **Style:** A deep-forest terminal presents two numbered, copyable steps: install Garden from source, then run the native Go path against an Eve-shaped project.
 - **Copy Action:** The outlined copy control uses acid-leaf text; hover fills it with acid leaf and switches the text to deep forest. Its copied or failed status is announced through a polite live region.
 
 ## Do's and Don'ts
@@ -209,12 +211,12 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 - **Do** reserve acid leaf for status, action, active evidence, and botanical connectors.
 - **Do** make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.
 - **Do** use stems, nodes, and leaf marks to explain relationships and runtime branching.
-- **Do** give every major section one botanical composition whose form reflects that section’s meaning.
+- **Do** use botanical or landscape imagery only where it reflects the section’s meaning; prefer footage and CSS geometry over standalone decorative SVGs.
 - **Do** preserve visible focus, reduced-motion behavior, and the documented 320px reflow.
 
 ### Don't:
 - **Don't** center the first viewport into a generic SaaS hero or replace the runtime specimen with a feature-card grid.
-- **Don't** add botanical imagery without a section-specific role or let it obscure product content.
+- **Don't** add disconnected botanical SVG decoration or let landscape media obscure product content.
 - **Don't** style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.
 - **Don't** use acid leaf as a broad background or routine body-text color.
 - **Don't** fabricate hosted-service, deployment, benchmark, customer, or compatibility claims.

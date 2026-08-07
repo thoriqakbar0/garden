@@ -19,6 +19,10 @@ runtime. Eve is distributed under the Apache License 2.0.
 - License: [`third_party/eve/LICENSE`](third_party/eve/LICENSE)
 - Upstream notice: [`third_party/eve/NOTICE`](third_party/eve/NOTICE)
 
+The Garden website displays the Eve wordmark solely to identify and link to the
+official [Eve product page](https://vercel.com/eve). The Eve and Vercel marks
+remain the property of Vercel, Inc.
+
 ## “ASMR field of wheat — nature”
 
 The Garden website uses an adapted excerpt of “ASMR field of wheat — nature”
@@ -28,3 +32,15 @@ The footage is licensed under
 [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/).
 Garden removes the audio, resizes and recompresses the footage, and renders it
 through a color-mapped ordered-dither shader.
+
+## “Centre Frame of a Faculty of Geography Tree, One”
+
+The Garden website uses an adapted excerpt of “Centre Frame of a Faculty of
+Geography Tree, One” by
+[Joaquim Baeta](https://commons.wikimedia.org/wiki/User:Spontaneous_Symmetry),
+sourced from
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Centre_Frame_of_a_Faculty_of_Geography_Tree,_One.webm).
+The footage is licensed under
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+Garden removes the audio, trims, resizes, and recompresses the footage, and
+renders it through the same tunable color-mapped ordered-dither shader.
