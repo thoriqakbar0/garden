@@ -71,11 +71,11 @@ components:
     rounded: "{rounded.sm}"
     padding: "0 1.2rem"
     height: "3.25rem"
-  runtime-card-official:
+  runtime-card-eve:
     backgroundColor: "{colors.forest}"
     textColor: "{colors.field-paper-bright}"
     rounded: "{rounded.lg}"
-  runtime-card-native:
+  runtime-card-garden:
     backgroundColor: "{colors.field-paper-deep}"
     textColor: "{colors.forest-ink}"
     rounded: "{rounded.lg}"
@@ -97,24 +97,24 @@ The composition is technical and restrained rather than generic SaaS. Its first 
 - Botanical forms used as information geometry
 - Dithered wheat-field motion with a static reduced-motion fallback
 - Asymmetric editorial layouts with evidence sequenced below the primary promise
-- Clear visual separation between official Eve ownership and Garden native ownership
+- Clear visual separation between Eve by Vercel and Garden’s independent Go implementation
 
 ## Colors
 
 The palette pairs warm, lightly chromatic paper with near-black green ink, then uses restrained greens for structure and a high-energy leaf tone for signals.
 
 ### Primary
-- **Forest**: The principal filled action and official-runtime surface; it carries light paper text and establishes Garden's technical botanical identity.
+- **Forest**: The principal filled action and Eve surface; it carries light paper text and establishes Garden's technical botanical identity.
 - **Deep Forest**: The darkest operational surface for protocol fields, terminals, and the footer; it is also the primary-button hover state.
 
 ### Secondary
 - **Acid Leaf**: The high-salience signal for live state, branch nodes, bullets, selections, and terminal prompts.
-- **Soft Acid Leaf**: A quiet native-runtime fill that keeps the alternate path distinct without implying the same ownership as official mode.
+- **Soft Acid Leaf**: A quiet Garden fill that keeps the independent alternative distinct from Eve.
 - **Moss**: Structural stems, file-tree rules, health dots, and branching connectors.
 
 ### Neutral
 - **Field Paper**: The page canvas and default light surface.
-- **Deep Field Paper**: Recessed beds, native-mode panels, and the installation section.
+- **Deep Field Paper**: Recessed beds, Garden panels, and the installation section.
 - **Bright Field Paper**: Light text on forest surfaces and the brightest raised specimens.
 - **Forest Ink**: Default copy on paper.
 - **Soft Forest Ink**: Secondary copy, navigation, captions, and supporting metadata.
@@ -148,11 +148,11 @@ Botanical branching is part of the grid rather than an overlay decoration. Lines
 
 ## Elevation & Depth
 
-The system combines tonal layering with restrained, diffuse shadows. Paper-depth changes establish most hierarchy; shadows are concentrated on interactive actions, the authoritative official-runtime card, protocol evidence, and the install terminal. Dark operational surfaces also use faint inset lines so their internal structure remains legible.
+The system combines tonal layering with restrained, diffuse shadows. Paper-depth changes establish most hierarchy; shadows are concentrated on interactive actions, the authoritative Eve card, protocol evidence, and the install terminal. Dark operational surfaces also use faint inset lines so their internal structure remains legible.
 
 ### Shadow Vocabulary
 - **Primary action** (`0 0.65rem 1.5rem oklch(0.24 0.08 148 / 0.2), 0 0.15rem 0.4rem oklch(0.24 0.08 148 / 0.16)`): Resting depth for the filled primary button.
-- **Official runtime** (`0 1.5rem 4rem oklch(0.22 0.07 148 / 0.2)`): Gives the official-runtime card stronger authority than the tonal native card.
+- **Eve** (`0 1.5rem 4rem oklch(0.22 0.07 148 / 0.2)`): Gives the Eve card stronger authority than the tonal Garden card.
 - **Operational field** (`0 1.5rem 4rem oklch(0.08 0.025 150 / 0.35), inset 0 0 0 1px oklch(0.9 0.05 110 / 0.1)`): Separates dark stream evidence from the surrounding deep-forest section.
 
 ## Shapes
@@ -175,8 +175,8 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 
 ### Cards / Containers
 - **Corner Style:** Major cards use the large radius; nested beds and branches use the medium radius.
-- **Background:** Official mode uses forest with bright paper text. Native mode uses deep field paper with forest ink. Dark protocol and terminal containers use deep forest.
-- **Shadow Strategy:** Official and operational evidence surfaces receive diffuse depth; native mode stays tonal and flat.
+- **Background:** Eve uses forest with bright paper text. Garden uses deep field paper with forest ink. Dark protocol and terminal containers use deep forest.
+- **Shadow Strategy:** Eve and operational evidence surfaces receive diffuse depth; Garden stays tonal and flat.
 - **Border:** Dividers and dark-field inset edges use low-opacity botanical lines rather than prominent card strokes.
 - **Internal Padding:** Major runtime cards use responsive padding from 1.6rem to 2.6rem.
 
@@ -203,7 +203,7 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 ### Do:
 - **Do** use warm paper depth changes before adding a shadow.
 - **Do** reserve acid leaf for status, action, active evidence, and botanical connectors.
-- **Do** make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.
+- **Do** make the boundary between Eve by Vercel and Garden’s compatible Go subset explicit in labels, commands, copy, and surface treatment.
 - **Do** use stems, nodes, and leaf marks only when they explain a real relationship.
 - **Do** use botanical or landscape imagery only where it reflects the section’s meaning; prefer footage and CSS geometry over standalone decorative SVGs.
 - **Do** preserve visible focus, reduced-motion behavior, and the documented 320px reflow.
@@ -211,6 +211,6 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 ### Don't:
 - **Don't** center the first viewport into a generic SaaS hero or add a competing feature-card grid beside the primary promise.
 - **Don't** add disconnected botanical SVG decoration or let landscape media obscure product content.
-- **Don't** style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.
+- **Don't** style Eve and Garden as equivalent implementations or imply that Garden executes arbitrary authored TypeScript.
 - **Don't** use acid leaf as a broad background or routine body-text color.
 - **Don't** fabricate hosted-service, deployment, benchmark, customer, or compatibility claims.

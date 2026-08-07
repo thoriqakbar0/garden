@@ -139,12 +139,12 @@ export function Home() {
                     </a>
                   </span>.
                 </span>
-                <span className="hero-line hero-line-promise">Own the runtime.</span>
+                <span className="hero-line hero-line-promise">Or own the runtime.</span>
               </h1>
               <p className="hero-description">
-                Garden runs your project with the official Eve runtime or the smaller
-                Garden native runtime. Both run locally. Garden always shows
-                which runtime is active.
+                Eve is Vercel’s complete framework and runtime. Garden is the
+                independent, self-hosted Go alternative for a documented
+                compatible subset.
               </p>
 
               <div className="hero-actions">
@@ -152,14 +152,14 @@ export function Home() {
                   Install Garden <ArrowIcon />
                 </a>
                 <a className="button button-secondary" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">
-                  Review Eve compatibility
+                  Compare Eve and Garden
                 </a>
               </div>
 
               <dl className="hero-facts" aria-label="Garden requirements">
-                <div><dt>Official baseline</dt><dd>Eve 0.27.6</dd></div>
-                <div><dt>Garden native</dt><dd>Single Go process</dd></div>
-                <div><dt>Hosted service</dt><dd>Not required</dd></div>
+                <div><dt>Original</dt><dd>Eve by Vercel</dd></div>
+                <div><dt>Alternative</dt><dd>Garden in Go</dd></div>
+                <div><dt>Hosted Garden</dt><dd>Not required</dd></div>
               </dl>
             </div>
 
@@ -169,41 +169,41 @@ export function Home() {
         <section className="runtime-section" id="runtime">
           <div className="section-shell">
             <div className="section-intro">
-              <h2>One project. Two paths.</h2>
+              <h2>One project shape. Two implementations.</h2>
               <p>
-                Choose the official Eve runtime for the full Eve feature set. Choose
-                the Garden native runtime for a smaller local implementation.
-                Garden always shows which runtime is active.
+                Run Eve for its complete authored feature set. Choose Garden when
+                its documented compatible subset is enough and you want an
+                independent, self-hosted Go runtime.
               </p>
             </div>
 
             <div className="runtime-landscape">
               <article className="mode mode-official">
-                <h3>Eve stays Eve.</h3>
+                <h3>Eve by Vercel.</h3>
                 <div className="mode-topline">
-                  <span>Official Eve runtime</span><code>eve@0.27.6</code>
+                  <span>Original framework and runtime</span><code>eve@0.27.6</code>
                 </div>
                 <p>
-                  Garden supervises the pinned runtime. Eve keeps compilation,
+                  Garden can launch the pinned package, but Eve still owns compilation,
                   tools, hooks, channels, subagents, schedules, workflows, and
                   sandboxing.
                 </p>
                 <div className="mode-command"><code>garden serve --runtime eve</code></div>
-                <ul aria-label="Official Eve runtime characteristics">
+                <ul aria-label="Eve by Vercel characteristics">
                   <li>Authored TypeScript executes unchanged</li>
-                  <li>Exact project-local runtime validation</li>
-                  <li>Official protocol and session ownership</li>
+                  <li>Garden only validates and supervises</li>
+                  <li>Eve owns protocol and sessions</li>
                 </ul>
               </article>
 
               <div className="mode-divider" aria-hidden="true">
-                <span>same project</span>
+                <span>same project shape</span>
               </div>
 
               <article className="mode mode-native">
-                <h3>Less surface. On purpose.</h3>
+                <h3>Garden, independently.</h3>
                 <div className="mode-topline">
-                  <span>Garden native runtime</span><code>garden</code>
+                  <span>Self-hosted Go alternative</span><code>garden</code>
                 </div>
                 <p>
                   One Go process owns sessions, streams, model and native-tool
@@ -211,7 +211,7 @@ export function Home() {
                   authored TypeScript.
                 </p>
                 <div className="mode-command"><code>garden serve</code></div>
-                <ul aria-label="Garden native runtime characteristics">
+                <ul aria-label="Garden characteristics">
                   <li>Codex or OpenAI-compatible models</li>
                   <li>Fsync-backed local workflow history</li>
                   <li>Explicit native capability boundary</li>
@@ -273,7 +273,7 @@ export function Home() {
               <article>
                 <span className="principle-mark" aria-hidden="true" />
                 <h3>Name the boundary</h3>
-                <p>The official Eve runtime runs the full Eve feature set. The Garden native runtime runs Garden’s supported Go feature set. Garden always shows which runtime is active.</p>
+                <p>Eve owns its complete feature set. Garden owns its documented compatible subset. When Garden launches Eve, it is still Eve—not a second Garden implementation.</p>
               </article>
             </div>
           </div>
@@ -290,18 +290,18 @@ export function Home() {
               <div className="requirement-row">
                 <span>macOS or Linux</span>
                 <span>Go 1.25+</span>
-                <span>Node 24+ for official Eve</span>
+                <span>Node 24+ to supervise Eve</span>
               </div>
             </div>
 
             <div className="install-terminal">
-              <div className="terminal-title"><span>Install, then run native</span><span>shell</span></div>
+              <div className="terminal-title"><span>Install, then run Garden</span><span>shell</span></div>
               <div className="install-step">
                 <span className="install-step-label"><i>1</i> Install Garden</span>
                 <CopyCommand command="git clone https://github.com/thoriqakbar0/garden.git && cd garden && make install" />
               </div>
               <div className="install-step">
-                <span className="install-step-label"><i>2</i> Run the Garden native runtime</span>
+                <span className="install-step-label"><i>2</i> Run Garden</span>
                 <CopyCommand command="garden serve --root /path/to/eve-project" />
               </div>
               <div className="terminal-line terminal-result"><span>[live]</span><code>http://127.0.0.1:3000</code></div>
@@ -312,7 +312,7 @@ export function Home() {
         <section className="closing-section">
           <div className="closing-shell">
             <div className="closing-mark" aria-hidden="true"><GardenMark /></div>
-            <h2>Eve stays Eve.<br />Garden starts where you choose.</h2>
+            <h2>Eve by Vercel.<br />Garden on your terms.</h2>
             <div className="closing-actions">
               <a className="button button-primary" href={githubUrl} target="_blank" rel="noreferrer">
                 View Garden on GitHub <ExternalIcon />

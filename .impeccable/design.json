@@ -99,9 +99,9 @@
         "purpose": "Filled primary button on hover."
       },
       {
-        "name": "official-runtime",
+        "name": "eve",
         "value": "0 1.5rem 4rem oklch(0.22 0.07 148 / 0.2)",
-        "purpose": "Authoritative official-runtime card and install terminal."
+        "purpose": "Authoritative Eve card and install terminal."
       },
       {
         "name": "operational-field",
@@ -177,19 +177,19 @@
       "css": ".ds-nav{display:flex;align-items:center;justify-content:space-between;min-height:3.25rem;gap:2rem;color:var(--ink)}.ds-brand{display:inline-flex;align-items:center;min-height:2.75rem;gap:.65rem;font:700 1.1rem var(--font-display),sans-serif;letter-spacing:-.025em;text-decoration:none}.ds-brand-mark{display:grid;width:2rem;height:2rem;color:var(--paper-bright);background:var(--forest);border-radius:50% 50% 45% 55%;place-items:center;rotate:-5deg}.ds-brand-mark svg{width:1.3rem;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}.ds-nav-links{display:flex;align-items:center;gap:2rem;margin-inline-start:auto}.ds-nav-links a,.ds-nav-github{display:inline-flex;min-height:2.75rem;align-items:center;color:var(--ink-soft);font:650 .875rem var(--font-body),sans-serif;text-decoration:none;transition:color 150ms}.ds-nav-github{color:var(--forest)}.ds-nav a:hover{color:var(--forest)}.ds-nav a:focus-visible{outline:2px solid currentColor;outline-offset:4px}"
     },
     {
-      "name": "Official Runtime Card",
+      "name": "Eve by Vercel Card",
       "kind": "card",
-      "refersTo": "runtime-card-official",
-      "description": "Authoritative surface for behavior owned by the pinned official Eve runtime.",
-      "html": "<article class=\"ds-mode-official\"><div class=\"ds-mode-topline\"><span>Official mode</span><code>eve@0.27.6</code></div><h3>Your Eve project, still itself.</h3><p>Garden supervises the pinned project-local runtime.</p><div class=\"ds-mode-command\"><code>garden serve --runtime eve</code></div></article>",
+      "refersTo": "runtime-card-eve",
+      "description": "Authoritative surface for behavior owned by Eve by Vercel.",
+      "html": "<article class=\"ds-mode-official\"><div class=\"ds-mode-topline\"><span>Original framework and runtime</span><code>eve@0.27.6</code></div><h3>Eve by Vercel.</h3><p>Garden may supervise the process, but Eve owns its behavior.</p><div class=\"ds-mode-command\"><code>garden serve --runtime eve</code></div></article>",
       "css": ".ds-mode-official{min-height:20rem;padding:2.6rem;color:var(--paper-bright);background:var(--forest);border-radius:var(--radius-lg);box-shadow:0 1.5rem 4rem oklch(0.22 0.07 148 / .2);font-family:var(--font-body),sans-serif}.ds-mode-topline{display:flex;justify-content:space-between;gap:1rem;margin-block-end:1rem;color:oklch(0.94 0.025 112 / .8);font:600 .67rem/1.4 var(--font-mono),monospace;letter-spacing:.08em;text-transform:uppercase}.ds-mode-official h3{max-width:13ch;margin:0 0 1.35rem;font:650 3rem/1.05 var(--font-display),sans-serif;letter-spacing:-.035em}.ds-mode-official p{color:oklch(0.94 0.025 112 / .84);line-height:1.6}.ds-mode-command{margin-block-start:2rem;padding:1rem 1.1rem;background:oklch(0.17 0.04 150 / .23);border-radius:var(--radius-sm);font:.76rem var(--font-mono),monospace}"
     },
     {
-      "name": "Native Runtime Card",
+      "name": "Garden Card",
       "kind": "card",
-      "refersTo": "runtime-card-native",
-      "description": "Tonal surface for Garden's deliberately smaller native contract.",
-      "html": "<article class=\"ds-mode-native\"><div class=\"ds-native-topline\"><span>Native mode</span><code>garden</code></div><h3>A smaller contract, deliberately.</h3><p>Sessions, live streams, model and native-tool turns live in one Go process.</p><div class=\"ds-native-command\"><code>garden serve</code></div></article>",
+      "refersTo": "runtime-card-garden",
+      "description": "Tonal surface for Garden's deliberately smaller compatible Go contract.",
+      "html": "<article class=\"ds-mode-native\"><div class=\"ds-native-topline\"><span>Self-hosted Go alternative</span><code>garden</code></div><h3>Garden, independently.</h3><p>Sessions, live streams, model and native-tool turns live in one Go process.</p><div class=\"ds-native-command\"><code>garden serve</code></div></article>",
       "css": ".ds-mode-native{min-height:20rem;padding:2.6rem;color:var(--ink);background:var(--paper-deep);border-radius:var(--radius-lg);font-family:var(--font-body),sans-serif}.ds-native-topline{display:flex;justify-content:space-between;gap:1rem;margin-block-end:1rem;color:var(--ink-soft);font:600 .67rem/1.4 var(--font-mono),monospace;letter-spacing:.08em;text-transform:uppercase}.ds-mode-native h3{max-width:13ch;margin:0 0 1.35rem;font:650 3rem/1.05 var(--font-display),sans-serif;letter-spacing:-.035em}.ds-mode-native p{color:var(--ink-soft);line-height:1.6}.ds-native-command{margin-block-start:2rem;padding:1rem 1.1rem;background:oklch(0.99 0.007 96 / .72);border-radius:var(--radius-sm);font:.76rem var(--font-mono),monospace}"
     },
     {
@@ -205,7 +205,7 @@
       "kind": "chip",
       "refersTo": null,
       "description": "Static operational prerequisite used near installation guidance.",
-      "html": "<span class=\"ds-requirement\">Node 24+ for official Eve</span>",
+      "html": "<span class=\"ds-requirement\">Node 24+ to supervise Eve</span>",
       "css": ".ds-requirement{display:inline-block;padding:.35rem .55rem;color:var(--ink-soft);background:oklch(0.99 0.007 96 / .65);border-radius:999px;font:.63rem var(--font-mono),monospace}"
     },
     {
@@ -226,14 +226,14 @@
       "Botanical forms used as information geometry",
       "Tunable dithered wheat and treetop motion with static reduced-motion fallbacks",
       "Asymmetric editorial layouts with evidence sequenced below the primary promise",
-      "Clear visual separation between official Eve ownership and Garden native ownership",
+      "Clear visual separation between Eve by Vercel and Garden’s independent Go implementation",
       "Official Eve provenance integrated directly into the hero headline"
     ],
     "rules": [],
     "dos": [
       "Do use warm paper depth changes before adding a shadow.",
       "Do reserve acid leaf for status, action, active evidence, and botanical connectors.",
-      "Do make official Eve and Garden native ownership explicit in labels, commands, copy, and surface treatment.",
+      "Do make the boundary between Eve by Vercel and Garden’s compatible Go subset explicit in labels, commands, copy, and surface treatment.",
       "Do use stems, nodes, and leaf marks only when they explain a real relationship.",
       "Do use botanical or landscape imagery only where it reflects the section’s meaning; prefer footage and CSS geometry over standalone decorative SVGs.",
       "Do preserve visible focus, reduced-motion behavior, and the documented 320px reflow."
@@ -241,7 +241,7 @@
     "donts": [
       "Don't center the first viewport into a generic SaaS hero or add a competing feature-card grid beside the primary promise.",
       "Don't add disconnected botanical SVG decoration or let landscape media obscure product content.",
-      "Don't style official and native modes as interchangeable or imply that native mode executes arbitrary authored TypeScript.",
+      "Don't style Eve and Garden as equivalent implementations or imply that Garden executes arbitrary authored TypeScript.",
       "Don't use acid leaf as a broad background or routine body-text color.",
       "Don't fabricate hosted-service, deployment, benchmark, customer, or compatibility claims."
     ]

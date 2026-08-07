@@ -16,20 +16,20 @@ Primary audience (inferred from the repository and requested landing page): deve
 
 ## Product purpose
 
-Garden runs Eve-shaped agents locally in two explicit execution modes: the pinned official Eve runtime for authored TypeScript compatibility, and a standalone native Go runtime for a smaller conversation contract. Success means a developer can understand the distinction, install Garden, and run the appropriate mode without misleading compatibility claims.
+Garden is an independent, self-hosted Go implementation of a documented Eve-compatible subset. Eve by Vercel remains the complete framework and runtime. Garden may validate and supervise a pinned project-local Eve process for compatibility, but that path is still Eve—not a second Garden runtime. Success means a developer can choose Eve or Garden without misleading compatibility claims.
 
 ## Positioning
 
-Garden is a local runtime bridge rather than a hosted agent platform: it can supervise the exact project-local Eve runtime or run a smaller Eve-shaped contract as one Go process.
+Garden is a self-hosted Go alternative rather than a hosted agent platform. It runs the smaller documented Eve-compatible contract as one process and can optionally supervise the exact project-local Eve package without claiming ownership of Eve’s behavior.
 
 ## Operating context
 
-Garden is installed from source with `make install`, used from a terminal, and pointed at an Eve-shaped project containing `agent/`. Official mode requires Node 24 and project-local `eve@0.27.6`; native mode requires Go 1.25+ plus Codex or an OpenAI-compatible endpoint.
+Garden is installed from source with `make install`, used from a terminal, and pointed at an Eve-shaped project containing `agent/`. Garden requires Go 1.25+ plus Codex or an OpenAI-compatible endpoint. Supervising Eve with `--runtime eve` instead requires Node 24 and project-local `eve@0.27.6`.
 
 ## Capabilities and constraints
 
-- Official mode delegates authored semantics to exact project-local Eve.
-- Native mode supports sessions, streaming, tool/model turns, cancellation, and local recovery, but not arbitrary authored TypeScript.
+- When Garden launches Eve, Eve owns authored semantics and runtime behavior.
+- Garden supports sessions, streaming, tool/model turns, cancellation, and local recovery, but not arbitrary authored TypeScript.
 - Cloudflare model endpoints and AI Gateway are supported model connections.
 - Cloudflare deployment is not implemented and must not be represented as available.
 - Distributed storage is not implemented.
@@ -47,8 +47,8 @@ The product name is Garden. The user selected a “Cultivated systems” directi
 
 ## Product principles
 
-- Preserve authored Eve semantics when official Eve owns execution.
-- Be explicit about native versus official capability.
+- Preserve authored Eve semantics whenever Eve owns execution.
+- Be explicit about the boundary between Eve by Vercel and Garden’s compatible Go subset.
 - Keep operation local and user-owned by default.
 - Prove compatibility through executable tests rather than broad claims.
 - Prefer a small, legible command surface.
