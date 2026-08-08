@@ -33,7 +33,7 @@ export class ApplicationErrorBoundary extends Component<
 
 function ApplicationFallback() {
   return (
-    <main className="boot-fallback mx-auto flex min-h-screen w-full max-w-[52rem] flex-col justify-center px-6 py-16">
+    <main className="mx-auto flex min-h-screen w-full max-w-[52rem] flex-col justify-center px-6 py-16">
       <div className="mb-8 inline-flex items-center gap-2.5 font-display text-[1.1rem] font-bold tracking-[-0.025em]">
         <span className="size-3 rounded-full bg-leaf" aria-hidden="true" />
         garden

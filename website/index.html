@@ -9,6 +9,34 @@
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <title>Garden — Run Eve on your infrastructure</title>
+    <style>
+      .boot-fallback {
+        opacity: 1;
+        transition: opacity 180ms ease-out;
+      }
+
+      .garden-booting .boot-fallback {
+        visibility: hidden;
+        opacity: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .boot-fallback { transition: none; }
+      }
+    </style>
+    <script>
+      document.documentElement.classList.add("garden-booting");
+      const revealGardenFallback = () => {
+        document.documentElement.classList.remove("garden-booting");
+      };
+
+      window.addEventListener("error", (event) => {
+        if (event.target instanceof HTMLScriptElement || event.error) {
+          revealGardenFallback();
+        }
+      }, true);
+      window.addEventListener("unhandledrejection", revealGardenFallback);
+    </script>
   </head>
   <body>
     <!--
