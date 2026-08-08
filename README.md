@@ -1,71 +1,34 @@
 <div align="center">
   <h1>Garden</h1>
   <p><strong>An independent, self-hosted Go runtime for Eve-compatible agents.</strong></p>
+  <p><strong><a href="https://garden.ta-0.com">Explore Garden on the web →</a></strong></p>
   <p>
-    <a href="https://vercel.com/eve">Eve</a> is Vercel’s filesystem-first framework and runtime for durable AI agents.
-    Garden is a separate implementation for running a supported Eve-compatible subset on infrastructure you control.
-  </p>
-  <p>
-    <a href="https://garden.ta-0.com">Website</a> ·
     <a href="#quickstart">Quickstart</a> ·
-    <a href="COMPATIBILITY.md">Compatibility</a>
+    <a href="COMPATIBILITY.md">Compatibility</a> ·
+    <a href="https://vercel.com/eve">Eve by Vercel</a>
   </p>
   <p>
     <img alt="Go 1.25+" src="https://img.shields.io/badge/Go-1.25%2B-00ADD8?logo=go&logoColor=white">
-    <img alt="Eve 0.27.6" src="https://img.shields.io/badge/Eve-0.27.6-000000">
+    <img alt="Compatibility baseline: Eve 0.27.6" src="https://img.shields.io/badge/Eve-0.27.6-000000">
     <img alt="Apache 2.0" src="https://img.shields.io/badge/License-Apache%202.0-2f6f3e">
   </p>
 </div>
 
-Choose the implementation that matches the project:
+[Eve by Vercel](https://vercel.com/eve) is the complete filesystem-first
+framework and runtime for durable AI agents. Garden is a separate, smaller Go
+implementation of its documented compatible subset for infrastructure you
+control. Garden can also validate and supervise a pinned project-local Eve
+process with `--runtime eve` while Eve remains fully in control.
 
-- **Eve by Vercel:** use Eve for its complete authored TypeScript feature set,
-  including tools, hooks, channels, connections, subagents, schedules, workflow
-  semantics, and sandboxing.
-- **Garden:** use the self-hosted Go alternative for the smaller compatible
-  contract documented here. Garden runs as one process with local workflow
-  storage and either the Codex CLI or a native OpenAI, Anthropic, Google, or OpenAI-compatible model endpoint.
+<p align="center">
+  <a href="https://garden.ta-0.com">
+    <img src="docs/assets/garden-cli-demo.gif" alt="Garden CLI discovering the model, native tool, and skill in an Eve-compatible weather agent">
+  </a>
+</p>
 
-Garden can also launch a pinned project-local copy of Eve with `--runtime eve`.
-That path is still Eve: Garden only validates and supervises the process. It is
-not a second Garden implementation.
-
-> [!WARNING]
-> Garden is still work in progress. For the full authored feature set, run Eve
-> itself, optionally supervised by Garden with `--runtime eve`. Garden currently
-> implements sessions, streaming, model and native-tool turns, the Codex
-> terminal, cancellation, and local recovery; it does not execute arbitrary
-> authored TypeScript.
-
-## Compatibility
-
-See the complete [Eve feature matrix](COMPATIBILITY.md) and [test inventory](TESTING.md).
-Compatibility is pinned to the Eve revision in [`UPSTREAM.md`](UPSTREAM.md).
-When Garden launches Eve with `--runtime eve`, compatibility is 1:1 by process
-ownership: Eve compiles and executes the project itself. Garden implements the
-narrower contract described below and does not claim complete Eve parity.
-
-| Capability | Status | Garden behavior |
-| --- | --- | --- |
-| Eve by Vercel | Available through `--runtime eve` | Garden runs project-local `eve@0.27.6`; Eve owns authored semantics and wire behavior. |
-| Authored TypeScript | Eve | Tools, hooks, channels, connections, subagents, schedules, sandboxes, and other supported Eve modules execute unchanged. |
-| Sandboxed terminal | Eve | Eve's built-in terminal tools use the agent's authored or default Eve sandbox backend and session-scoped `/workspace`. |
-| Eve project discovery | Available | Discovers instructions, model, tools, skills, channels, connections, subagents, schedules, and evals. |
-| Model execution | Available | Sandboxed Codex CLI execution plus native OpenAI, Anthropic, Google, and OpenAI Chat Completions-compatible providers. |
-| Native tool loop | Available | Model -> tool -> model with bounded requests, deadlines, cancellation, and durable Eve events. |
-| Codex terminal | Available | Codex may run terminal commands inside the project sandbox; command text and output are not copied into Garden's durable log. |
-| Eve HTTP sessions | Available | Create, continue, stream, and cancel routes with protocol-v19 envelopes and headers. |
-| Live NDJSON | Available | Immediate prelude, incremental flush, absolute replay, and tail-relative replay. |
-| Continuation tokens | Available | Opaque token ownership follows Eve's channel/session boundary. |
-| Local durability | Available | Fsync-backed JSONL, safe identifiers, partial-tail repair, and deterministic restart settlement. |
-| Concurrency | Available | One active turn per session; independent sessions run concurrently. |
-| Self-hosted exposure | Available | Loopback by default; bearer authentication is required for non-loopback binding. |
-| Schedule discovery | Available | Discovers static schedule metadata. |
-| Schedule execution | Partial | Dispatch creates a durable session; authored schedule code is not evaluated. |
-| TypeScript tools | Native binding only | A discovered tool must have a compiled Go implementation. |
-| Skills and other authored modules | Discovery only | TypeScript and markdown modules are not dynamically executed. |
-| Interrupted post-tool resume | Not implemented | Restart settles an interrupted turn without repeating it; it does not resume the final model step. |
-| Distributed storage | Not implemented | One Garden writer owns one local workflow store. |
+The demo shows Garden inspecting the included Eve weather agent. The underlying
+`garden info` command, prerequisites, and discovered capabilities remain
+available as text in the [Quickstart](#quickstart).
 
 ## Quickstart
 
@@ -150,6 +113,40 @@ Next, choose the relevant path:
 - [configure another model backend](#model-configuration);
 - [serve the Eve-compatible HTTP API](#http-runtime); or
 - [adapt an Eve-shaped project](#supported-project-shape).
+
+## Compatibility
+
+> [!WARNING]
+> Garden is a work in progress and does not implement Eve’s complete authored
+> TypeScript feature set. Use Eve itself—optionally supervised with
+> `--runtime eve`—when you need full Eve behavior.
+
+Garden’s native Go runtime implements the narrower contract in the
+[Eve feature matrix](COMPATIBILITY.md), pinned to the revision in
+[`UPSTREAM.md`](UPSTREAM.md). See the [test inventory](TESTING.md) for
+supporting coverage.
+
+| Capability | Status | Garden behavior |
+| --- | --- | --- |
+| Eve by Vercel | Available through `--runtime eve` | Garden runs project-local `eve@0.27.6`; Eve owns authored semantics and wire behavior. |
+| Authored TypeScript | Eve | Tools, hooks, channels, connections, subagents, schedules, sandboxes, and other supported Eve modules execute unchanged. |
+| Sandboxed terminal | Eve | Eve's built-in terminal tools use the agent's authored or default Eve sandbox backend and session-scoped `/workspace`. |
+| Eve project discovery | Available | Discovers instructions, model, tools, skills, channels, connections, subagents, schedules, and evals. |
+| Model execution | Available | Sandboxed Codex CLI execution plus native OpenAI, Anthropic, Google, and OpenAI Chat Completions-compatible providers. |
+| Native tool loop | Available | Model -> tool -> model with bounded requests, deadlines, cancellation, and durable Eve events. |
+| Codex terminal | Available | Codex may run terminal commands inside the project sandbox; command text and output are not copied into Garden's durable log. |
+| Eve HTTP sessions | Available | Create, continue, stream, and cancel routes with protocol-v19 envelopes and headers. |
+| Live NDJSON | Available | Immediate prelude, incremental flush, absolute replay, and tail-relative replay. |
+| Continuation tokens | Available | Opaque token ownership follows Eve's channel/session boundary. |
+| Local durability | Available | Fsync-backed JSONL, safe identifiers, partial-tail repair, and deterministic restart settlement. |
+| Concurrency | Available | One active turn per session; independent sessions run concurrently. |
+| Self-hosted exposure | Available | Loopback by default; bearer authentication is required for non-loopback binding. |
+| Schedule discovery | Available | Discovers static schedule metadata. |
+| Schedule execution | Partial | Dispatch creates a durable session; authored schedule code is not evaluated. |
+| TypeScript tools | Native binding only | A discovered tool must have a compiled Go implementation. |
+| Skills and other authored modules | Discovery only | TypeScript and markdown modules are not dynamically executed. |
+| Interrupted post-tool resume | Not implemented | Restart settles an interrupted turn without repeating it; it does not resume the final model step. |
+| Distributed storage | Not implemented | One Garden writer owns one local workflow store. |
 
 ## Run Eve through Garden
 
