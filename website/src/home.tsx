@@ -104,13 +104,13 @@ export function Home() {
           <div className="relative z-[1] mx-auto grid w-shell grid-cols-[minmax(0,44rem)] items-center max-[64rem]:grid-cols-1 max-[48rem]:gap-y-0">
             <div className={revealClassName("hero-copy max-w-[44rem]", heroStage >= 1)}>
               <h1 className="m-0 max-w-[10ch] font-display text-[clamp(4rem,7.6vw,6rem)] font-[650] leading-[0.95] tracking-[-0.04em] text-balance max-[64rem]:max-w-[11ch] max-[48rem]:max-w-[12ch] max-[48rem]:text-[clamp(2.9rem,12.8vw,3.45rem)]">
-                <span className="block text-ink">Own your agent</span>
-                <span className="block text-forest">runtime.</span>
+                <span className="block text-ink">Run Eve on your</span>
+                <span className="block text-forest">infrastructure.</span>
               </h1>
               <p className="mt-8 max-w-[38rem] text-[clamp(1.05rem,1.7vw,1.25rem)] leading-[1.6] text-ink-soft text-pretty max-[48rem]:mt-[1.1rem] max-[48rem]:text-base">
-                Eve by Vercel is the complete, deeply integrated framework and
-                runtime. Garden is the smaller self-hosted Go implementation for
-                teams that need its documented compatible subset.
+                Garden is a self-hosted Go runtime for Eve-compatible agents. It
+                can also launch and supervise Eve by Vercel when you need the
+                complete framework.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3.5 max-[48rem]:mt-[1.15rem] max-[31rem]:flex-nowrap max-[31rem]:gap-2.5">
