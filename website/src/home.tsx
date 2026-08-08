@@ -108,10 +108,9 @@ export function Home() {
                 <span className="block text-forest">runtime.</span>
               </h1>
               <p className="mt-8 max-w-[38rem] text-[clamp(1.05rem,1.7vw,1.25rem)] leading-[1.6] text-ink-soft text-pretty max-[48rem]:mt-[1.1rem] max-[48rem]:text-base">
-                Garden runs a supported Eve-compatible subset in one self-hosted
-                Go process, with sessions, streaming, model and native-tool turns,
-                cancellation, and local recovery on infrastructure you control.
-                Eve is the complete framework and runtime by Vercel.
+                Eve by Vercel is the complete, deeply integrated framework and
+                runtime. Garden is the smaller self-hosted Go implementation for
+                teams that need its documented compatible subset.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3.5 max-[48rem]:mt-[1.15rem] max-[31rem]:flex-nowrap max-[31rem]:gap-2.5">
@@ -168,14 +167,15 @@ export function Home() {
               </div>
 
               <article className="mode relative min-h-[30rem] rounded-[var(--radius-lg)] bg-forest p-[clamp(1.6rem,3vw,2.6rem)] text-paper-bright shadow-[0_1.5rem_4rem_oklch(0.22_0.07_148/0.2)] max-[48rem]:min-h-0">
-                <h3 className="mb-5 max-w-[13ch] font-display text-[clamp(2rem,3.2vw,3rem)] leading-[1.05] tracking-[-0.035em] text-balance">Need the complete Eve runtime?</h3>
+                <h3 className="mb-5 max-w-[13ch] font-display text-[clamp(2rem,3.2vw,3rem)] leading-[1.05] tracking-[-0.035em] text-balance">Run Eve in full.</h3>
                 <div className="mode-topline mb-4 flex justify-between gap-4">
                   <span className="font-mono text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[oklch(0.94_0.025_112/0.8)]">Eve by Vercel</span><code className="font-mono text-xs text-[oklch(0.94_0.025_112/0.8)]">eve@0.27.6</code>
                 </div>
                 <p className="m-0 max-w-[34rem] text-[oklch(0.94_0.025_112/0.84)] text-pretty">
-                  Garden can validate and supervise the pinned project-local Eve
-                  process. Eve still owns compilation, authored TypeScript,
-                  protocol behavior, sessions, and sandboxing.
+                  Eve by Vercel is the definitive experience: authored TypeScript,
+                  tools, sessions, protocol behavior, and sandboxing working as one
+                  system. Garden can validate and supervise your pinned project-local
+                  Eve process while Eve remains fully in control.
                 </p>
                 <div className="mt-8 overflow-x-auto rounded-[var(--radius-sm)] bg-[oklch(0.17_0.04_150/0.23)] p-4 font-mono text-xs"><code>garden serve --runtime eve</code></div>
                 <ul className="mt-8 grid list-none gap-3 p-0 text-sm text-[oklch(0.94_0.025_112/0.8)]" aria-label="Eve by Vercel characteristics">

@@ -6,7 +6,7 @@ import { setDitherScale } from "./dither-context";
 
 export default function DialKitAuthoring() {
   const dither = useDialKit("Dither", {
-    ditherScale: [1, 1, 12, 1],
+    ditherScale: [2, 1, 12, 1],
   }, {
     id: "garden-dither",
     persist: true,
