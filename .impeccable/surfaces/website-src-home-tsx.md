@@ -10,8 +10,9 @@ related_targets: ["website/src/styles.css","website/src/dithered-field.tsx","web
 - Scope: public landing page at `/`; visitor mode is Persuade.
 - Audience: developers evaluating how to run Eve on infrastructure they control.
 - Job: understand the two honest paths—Garden’s native Eve-compatible Go subset or supervised project-local Eve by Vercel—then install or inspect the source.
-- Positioning: lead with “Run Eve on your infrastructure.” Attribute the complete framework to Eve by Vercel and describe Garden as the self-hosted Go runtime for compatible agents.
-- Primary action: install Garden from source. Secondary proof: compatibility and test inventories.
+- Positioning: lead with “Run Eve on your infrastructure.” Promise the developer experience of Eve by Vercel on infrastructure the visitor controls, then qualify Garden as the self-hosted Go runtime for the documented compatible subset.
+- Technical proof: surface the pinned Eve baseline, protocol version, Go build version, license, exact runtime commands, and ownership boundary using facts from README.md.
+- Primary action: get Garden on GitHub. Secondary action: read the README. Compatibility and installation remain supporting proof deeper in the page.
 - External links: pair every new-tab link with the shared external-link cue and hidden “opens in a new tab” text; reserve the right-arrow icon for movement within the page.
 - Constraints: no fabricated customers, benchmarks, hosted-service, or Cloudflare deployment claims; product truth comes from README.md and compatibility docs.
 - Direction: Cultivated systems — field-note surfaces, forest ink, acid-leaf signals, CSS botanical geometry and shared dithered wheat and treetop footage without decorative SVG illustrations.

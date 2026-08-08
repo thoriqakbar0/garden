@@ -4,7 +4,13 @@ import { CopyCommand } from "./copy-command";
 import { useDitherScale } from "./dither-context";
 import { DitheredField, DitheredTrees } from "./dithered-field";
 
-const githubUrl = "https://github.com/thoriqakbar0/garden";
+const repositoryUrl = "https://github.com/thoriqakbar0/garden";
+const repositoryLinks = {
+  compatibility: `${repositoryUrl}/blob/main/COMPATIBILITY.md`,
+  documentation: `${repositoryUrl}/blob/main/README.md`,
+  licenses: `${repositoryUrl}/blob/main/THIRD_PARTY_NOTICES.md`,
+  source: repositoryUrl,
+} as const;
 
 /* ─────────────────────────────────────────────────────────
  * HERO ANIMATION STORYBOARD
@@ -52,14 +58,6 @@ function GardenMark() {
   );
 }
 
-function ArrowIcon() {
-  return (
-    <svg className="w-[1.05rem] fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:2]" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M4 10h11M11 6l4 4-4 4" />
-    </svg>
-  );
-}
-
 function ExternalLinkCue() {
   return (
     <>
@@ -95,7 +93,7 @@ export function Home() {
             <a href="#install">Install</a>
           </div>
 
-          <a className="ms-auto inline-flex min-h-11 items-center gap-1.5 text-sm font-[650] text-forest no-underline transition-colors duration-150 hover:text-forest-deep max-[48rem]:min-w-11 max-[48rem]:justify-center max-[31rem]:gap-0 max-[31rem]:text-[0]" href={githubUrl} target="_blank" rel="noreferrer">
+          <a className="ms-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-forest px-4 text-sm font-[700] text-paper-bright no-underline shadow-[0_0.35rem_0.8rem_oklch(0.24_0.08_148/0.16)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[48rem]:min-w-11 max-[48rem]:px-3 max-[31rem]:gap-0 max-[31rem]:text-[0]" href={repositoryLinks.source} target="_blank" rel="noreferrer">
             GitHub <ExternalLinkCue />
           </a>
         </nav>
@@ -111,24 +109,25 @@ export function Home() {
                 <span className="block text-forest">infrastructure.</span>
               </h1>
               <p className="mt-8 max-w-[38rem] text-[clamp(1.05rem,1.7vw,1.25rem)] leading-[1.6] text-ink-soft text-pretty max-[48rem]:mt-[1.1rem] max-[48rem]:text-base">
-                Garden is a self-hosted Go runtime for Eve-compatible agents. It
-                can also launch and supervise Eve by Vercel when you need the
-                complete framework.
+                Get the developer experience of Eve by Vercel on infrastructure
+                you control. Garden runs the documented compatible subset in a
+                self-hosted Go runtime.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3.5 max-[48rem]:mt-[1.15rem] max-[31rem]:flex-nowrap max-[31rem]:gap-2.5">
-                <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-[color,background-color,box-shadow,transform] duration-160 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-forest-deep hover:shadow-[0_0.6rem_1.15rem_oklch(0.24_0.08_148/0.22),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] active:scale-96 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href="#install">
-                  Install Garden <ArrowIcon />
+                <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.source} target="_blank" rel="noreferrer">
+                  Get Garden on GitHub <ExternalLinkCue />
                 </a>
-                <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] px-5 text-sm font-[750] text-forest no-underline shadow-[inset_0_0_0_1px_var(--line-strong)] transition-[color,background-color,box-shadow,transform] duration-160 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-paper-bright active:scale-96 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">
-                  Review compatibility <ExternalLinkCue />
+                <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] px-5 text-sm font-[750] text-forest no-underline shadow-[inset_0_0_0_1px_var(--line-strong)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-paper-bright active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.documentation} target="_blank" rel="noreferrer">
+                  Read the README <ExternalLinkCue />
                 </a>
               </div>
 
-              <dl className="m-0 mt-12 flex flex-wrap gap-x-8 gap-y-5 max-[48rem]:mt-6 max-[48rem]:gap-x-6 max-[48rem]:gap-y-4 max-[31rem]:grid max-[31rem]:grid-cols-2" aria-label="Garden operating model">
-                <div className="grid gap-0.5"><dt className="font-mono text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">Runs</dt><dd className="m-0 text-sm font-bold text-ink">On your infrastructure</dd></div>
-                <div className="grid gap-0.5"><dt className="font-mono text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">Stores</dt><dd className="m-0 text-sm font-bold text-ink">Local workflow history</dd></div>
-                <div className="grid gap-0.5"><dt className="font-mono text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">Requires</dt><dd className="m-0 text-sm font-bold text-ink">No hosted Garden service</dd></div>
+              <dl className="m-0 mt-12 flex flex-wrap gap-x-8 gap-y-5 max-[48rem]:mt-6 max-[48rem]:gap-x-6 max-[48rem]:gap-y-4 max-[31rem]:grid max-[31rem]:grid-cols-2" aria-label="Garden technical baseline">
+                <div className="grid gap-0.5"><dt className="text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">Eve baseline</dt><dd className="m-0 font-mono text-sm font-bold text-ink">eve@0.27.6</dd></div>
+                <div className="grid gap-0.5"><dt className="text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">Wire protocol</dt><dd className="m-0 font-mono text-sm font-bold text-ink">v19</dd></div>
+                <div className="grid gap-0.5"><dt className="text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">Build</dt><dd className="m-0 font-mono text-sm font-bold text-ink">Go 1.25+</dd></div>
+                <div className="grid gap-0.5"><dt className="text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-ink-soft">License</dt><dd className="m-0 font-mono text-sm font-bold text-ink">Apache-2.0</dd></div>
               </dl>
             </div>
 
@@ -138,11 +137,11 @@ export function Home() {
         <section className="runtime-section relative overflow-hidden py-[clamp(6rem,10vw,9rem)]" id="runtime">
           <div className="relative z-[1] mx-auto w-shell">
             <div className="grid grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.65fr)] items-end gap-12 max-[48rem]:grid-cols-1">
-              <h2 className="m-0 max-w-[16ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">One Go process. Nothing hosted in the middle.</h2>
+              <h2 className="m-0 max-w-[16ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Choose the runtime boundary.</h2>
               <p className="m-0 max-w-[38rem] text-[1.05rem] text-ink-soft text-pretty">
-                Point Garden at an Eve-shaped project and run the supported
-                contract locally. Garden owns the server, workflow history, and
-                model loop; your infrastructure owns the process.
+                Run Garden’s compatible Go subset in one process, or use the same
+                project shape with a pinned Eve runtime. The interface stays
+                familiar; execution ownership stays explicit.
               </p>
             </div>
 
@@ -157,7 +156,7 @@ export function Home() {
                   cancellation, and recovery without a hosted Garden service. It
                   does not execute arbitrary authored TypeScript.
                 </p>
-                <div className="mt-8 overflow-x-auto rounded-[var(--radius-sm)] bg-[oklch(0.99_0.007_96/0.72)] p-4 font-mono text-xs"><code>garden serve</code></div>
+                <div className="mt-8 overflow-x-auto rounded-[var(--radius-sm)] bg-[oklch(0.99_0.007_96/0.72)] p-4 font-mono text-xs"><code>garden serve --runtime native</code></div>
                 <ul className="mt-8 grid list-none gap-3 p-0 text-sm text-ink-soft" aria-label="Garden characteristics">
                   <li className="mode-item flex items-center gap-2.5">OpenAI, Anthropic, Google, or Codex</li>
                   <li className="mode-item flex items-center gap-2.5">Fsync-backed local workflow history</li>
@@ -170,21 +169,20 @@ export function Home() {
               </div>
 
               <article className="mode relative min-h-[30rem] rounded-[var(--radius-lg)] bg-forest p-[clamp(1.6rem,3vw,2.6rem)] text-paper-bright shadow-[0_1.5rem_4rem_oklch(0.22_0.07_148/0.2)] max-[48rem]:min-h-0">
-                <h3 className="mb-5 max-w-[13ch] font-display text-[clamp(2rem,3.2vw,3rem)] leading-[1.05] tracking-[-0.035em] text-balance">Run Eve in full.</h3>
+                <h3 className="mb-5 max-w-[13ch] font-display text-[clamp(2rem,3.2vw,3rem)] leading-[1.05] tracking-[-0.035em] text-balance">Run Eve on your infrastructure.</h3>
                 <div className="mode-topline mb-4 flex justify-between gap-4">
                   <span className="font-mono text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[oklch(0.94_0.025_112/0.8)]">Eve by Vercel</span><code className="font-mono text-xs text-[oklch(0.94_0.025_112/0.8)]">eve@0.27.6</code>
                 </div>
                 <p className="m-0 max-w-[34rem] text-[oklch(0.94_0.025_112/0.84)] text-pretty">
-                  Eve by Vercel is the definitive experience: authored TypeScript,
-                  tools, sessions, protocol behavior, and sandboxing working as one
-                  system. Garden can validate and supervise your pinned project-local
-                  Eve process while Eve remains fully in control.
+                  Use your pinned project-local Eve package for the complete authored
+                  experience—TypeScript, tools, sessions, protocol behavior, and
+                  sandboxing—on infrastructure you control.
                 </p>
                 <div className="mt-8 overflow-x-auto rounded-[var(--radius-sm)] bg-[oklch(0.17_0.04_150/0.23)] p-4 font-mono text-xs"><code>garden serve --runtime eve</code></div>
                 <ul className="mt-8 grid list-none gap-3 p-0 text-sm text-[oklch(0.94_0.025_112/0.8)]" aria-label="Eve by Vercel characteristics">
                   <li className="mode-item flex items-center gap-2.5">Run the complete authored feature set</li>
                   <li className="mode-item flex items-center gap-2.5">Execute project TypeScript unchanged</li>
-                  <li className="mode-item flex items-center gap-2.5">Keep Eve in control of runtime behavior</li>
+                  <li className="mode-item flex items-center gap-2.5">Keep code and execution on your infrastructure</li>
                 </ul>
               </article>
             </div>
@@ -200,7 +198,7 @@ export function Home() {
                 features, and official Eve delegation separately. The compatibility
                 matrix ties each claim to its evidence instead of promising broad parity.
               </p>
-              <a className="mt-7 inline-flex min-h-11 items-center gap-2 text-sm font-[750] text-leaf no-underline" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">
+              <a className="mt-7 inline-flex min-h-11 items-center gap-2 text-sm font-[750] text-leaf no-underline" href={repositoryLinks.compatibility} target="_blank" rel="noreferrer">
                 Review the compatibility matrix <ExternalLinkCue />
               </a>
             </div>
@@ -284,10 +282,10 @@ export function Home() {
             <div className="closing-mark mb-8 grid size-16 -rotate-6 place-items-center rounded-[50%_50%_45%_55%] bg-leaf text-forest" aria-hidden="true"><GardenMark /></div>
             <h2 className="m-0 max-w-[17ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Own a runtime you can inspect.</h2>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5 max-[31rem]:flex-col max-[31rem]:items-stretch">
-              <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-[color,background-color,box-shadow,transform] duration-160 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-forest-deep hover:shadow-[0_0.6rem_1.15rem_oklch(0.24_0.08_148/0.22),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] active:scale-96 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={githubUrl} target="_blank" rel="noreferrer">
+              <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.source} target="_blank" rel="noreferrer">
                 Get Garden on GitHub <ExternalLinkCue />
               </a>
-              <a className="inline-flex min-h-13 items-center gap-2 px-3 text-sm font-[750] text-forest" href="https://github.com/thoriqakbar0/garden/blob/main/README.md" target="_blank" rel="noreferrer">
+              <a className="inline-flex min-h-13 items-center gap-2 px-3 text-sm font-[750] text-forest" href={repositoryLinks.documentation} target="_blank" rel="noreferrer">
                 Read the Garden documentation <ExternalLinkCue />
               </a>
             </div>
@@ -306,9 +304,9 @@ export function Home() {
             <span>Eve is the complete framework and runtime by Vercel.</span>
           </p>
           <div className="flex justify-end gap-6 max-[48rem]:flex-wrap max-[48rem]:justify-start">
-            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">Compatibility <ExternalLinkCue /></a>
-            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href="https://github.com/thoriqakbar0/garden/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">Licenses <ExternalLinkCue /></a>
-            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href={githubUrl} target="_blank" rel="noreferrer">Source <ExternalLinkCue /></a>
+            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href={repositoryLinks.compatibility} target="_blank" rel="noreferrer">Compatibility <ExternalLinkCue /></a>
+            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href={repositoryLinks.licenses} target="_blank" rel="noreferrer">Licenses <ExternalLinkCue /></a>
+            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href={repositoryLinks.source} target="_blank" rel="noreferrer">Source <ExternalLinkCue /></a>
           </div>
         </div>
       </footer>

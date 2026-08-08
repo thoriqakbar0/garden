@@ -14,9 +14,7 @@
   </p>
 </div>
 
-Garden is a self-hosted Go runtime for Eve-compatible agents. It can also
-launch and supervise [Eve by Vercel](https://vercel.com/eve) when you need the
-complete framework. In that mode, Eve remains fully in control.
+Garden is a self-hosted Go runtime for Eve-compatible agents.
 
 <p align="center">
   <a href="https://garden.ta-0.com">
