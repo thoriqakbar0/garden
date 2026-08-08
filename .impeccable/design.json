@@ -128,7 +128,7 @@
       {
         "name": "landscape-dither",
         "value": "requestVideoFrameCallback while intersecting; DialKit ditherScale 1–12",
-        "purpose": "Uploads decoded wheat and treetop frames to one tunable ordered-dither shader; pauses outside each section or from the shared motion control."
+        "purpose": "Uploads decoded wheat and treetop frames to one tunable ordered-dither shader; pauses outside each section or from that video’s local motion control."
       },
       {
         "name": "eve-mark-glitch",

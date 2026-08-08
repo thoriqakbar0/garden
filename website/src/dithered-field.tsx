@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const POSITION_VERTEX_SHADER = `
   attribute vec2 a_position;
@@ -133,12 +133,13 @@ function sourceSize(source: FieldSource): Readonly<{ width: number; height: numb
 type DitheredVideoProps = Readonly<{
   className: string;
   ditherScale: number;
-  paused: boolean;
+  label: string;
   poster: string;
   sources: ReadonlyArray<Readonly<{ src: string; type: string }>>;
 }>;
 
-function DitheredVideo({ className, ditherScale, paused, poster, sources }: DitheredVideoProps) {
+function DitheredVideo({ className, ditherScale, label, poster, sources }: DitheredVideoProps) {
+  const [paused, setPaused] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const ditherScaleRef = useRef(ditherScale);
@@ -424,11 +425,21 @@ function DitheredVideo({ className, ditherScale, paused, poster, sources }: Dith
   }, [poster]);
 
   return (
-    <div className={className} aria-hidden="true">
-      <canvas ref={canvasRef} />
-      <video ref={videoRef} muted loop playsInline preload="metadata" tabIndex={-1}>
+    <div className={className}>
+      <canvas ref={canvasRef} aria-hidden="true" />
+      <video ref={videoRef} aria-hidden="true" muted loop playsInline preload="metadata" tabIndex={-1}>
         {sources.map((source) => <source key={source.src} src={source.src} type={source.type} />)}
       </video>
+      <button
+        className="motion-control absolute end-4 bottom-4 z-[2] inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] bg-forest-deep/90 px-3 font-body text-xs font-[650] text-paper-bright shadow-[0_0.35rem_0.8rem_oklch(0.12_0.04_150/0.22)] transition-colors duration-150 hover:bg-forest max-[31rem]:end-3 max-[31rem]:bottom-3"
+        type="button"
+        aria-pressed={paused}
+        data-paused={paused}
+        onClick={() => setPaused((isPaused) => !isPaused)}
+      >
+        <span className="motion-control-icon h-3 w-2.5 border-x-2 border-current" aria-hidden="true" />
+        <span>{paused ? `Play ${label} motion` : `Pause ${label} motion`}</span>
+      </button>
     </div>
   );
 }
@@ -444,12 +455,12 @@ const TREE_SOURCES = [
 ] as const;
 
 /** Renders local wheat-field footage through a Garden-colored dither shader. */
-export function DitheredField({ ditherScale, paused }: Readonly<{ ditherScale: number; paused: boolean }>) {
+export function DitheredField({ ditherScale }: Readonly<{ ditherScale: number }>) {
   return (
     <DitheredVideo
       className="hero-field"
       ditherScale={ditherScale}
-      paused={paused}
+      label="field"
       poster="/media/field-wind-poster.jpg"
       sources={FIELD_SOURCES}
     />
@@ -457,12 +468,12 @@ export function DitheredField({ ditherScale, paused }: Readonly<{ ditherScale: n
 }
 
 /** Renders local tree footage through the same tunable dither shader. */
-export function DitheredTrees({ ditherScale, paused }: Readonly<{ ditherScale: number; paused: boolean }>) {
+export function DitheredTrees({ ditherScale }: Readonly<{ ditherScale: number }>) {
   return (
     <DitheredVideo
       className="principles-field"
       ditherScale={ditherScale}
-      paused={paused}
+      label="trees"
       poster="/media/trees-wind-poster.jpg"
       sources={TREE_SOURCES}
     />

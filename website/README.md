@@ -1,7 +1,6 @@
 # Garden website
 
-The public landing page for Garden. It is a standalone React application built with Vite and TanStack Router; the
-Garden CLI remains the Go project at the repository root.
+The public landing page for Garden is a standalone React application built with Vite and TanStack Router; the Garden CLI remains the Go project at the repository root. Tailwind CSS is the required default for new or changed UI styling: migrate touched styles to utilities and keep custom CSS only for effects or behavior Tailwind cannot express clearly.
 
 ## Develop
 

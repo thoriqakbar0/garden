@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-React landing page using Vite and TanStack Router in `website/`, selected by the user. Garden itself remains a Go CLI.
+React landing page using Vite and TanStack Router in `website/`, selected by the user. UI work standardizes on Tailwind CSS: migrate touched styling to utilities and reserve custom CSS for effects or behavior that utilities cannot express clearly. Garden itself remains a Go CLI.
 
 ## Users
 
