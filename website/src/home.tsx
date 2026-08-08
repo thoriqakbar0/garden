@@ -60,11 +60,14 @@ function ArrowIcon() {
   );
 }
 
-function ExternalIcon() {
+function ExternalLinkCue() {
   return (
-    <svg className="w-[1.05rem] fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:2]" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-      <path d="M8 5H5v10h10v-3M11 5h4v4M15 5l-7 7" />
-    </svg>
+    <>
+      <svg className="w-[1.05rem] fill-none stroke-current [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:2]" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path d="M8 5H5v10h10v-3M11 5h4v4M15 5l-7 7" />
+      </svg>
+      <span className="sr-only"> (opens in a new tab)</span>
+    </>
   );
 }
 
@@ -93,7 +96,7 @@ export function Home() {
           </div>
 
           <a className="ms-auto inline-flex min-h-11 items-center gap-1.5 text-sm font-[650] text-forest no-underline transition-colors duration-150 hover:text-forest-deep max-[48rem]:min-w-11 max-[48rem]:justify-center max-[31rem]:gap-0 max-[31rem]:text-[0]" href={githubUrl} target="_blank" rel="noreferrer">
-            GitHub <ExternalIcon />
+            GitHub <ExternalLinkCue />
           </a>
         </nav>
       </header>
@@ -118,7 +121,7 @@ export function Home() {
                   Install Garden <ArrowIcon />
                 </a>
                 <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] px-5 text-sm font-[750] text-forest no-underline shadow-[inset_0_0_0_1px_var(--line-strong)] transition-[color,background-color,box-shadow,transform] duration-160 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-paper-bright active:scale-96 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">
-                  Review compatibility
+                  Review compatibility <ExternalLinkCue />
                 </a>
               </div>
 
@@ -198,7 +201,7 @@ export function Home() {
                 matrix ties each claim to its evidence instead of promising broad parity.
               </p>
               <a className="mt-7 inline-flex min-h-11 items-center gap-2 text-sm font-[750] text-leaf no-underline" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">
-                Review the compatibility matrix <ArrowIcon />
+                Review the compatibility matrix <ExternalLinkCue />
               </a>
             </div>
 
@@ -282,10 +285,10 @@ export function Home() {
             <h2 className="m-0 max-w-[17ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Own a runtime you can inspect.</h2>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5 max-[31rem]:flex-col max-[31rem]:items-stretch">
               <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-[color,background-color,box-shadow,transform] duration-160 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-forest-deep hover:shadow-[0_0.6rem_1.15rem_oklch(0.24_0.08_148/0.22),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] active:scale-96 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={githubUrl} target="_blank" rel="noreferrer">
-                Get Garden on GitHub <ExternalIcon />
+                Get Garden on GitHub <ExternalLinkCue />
               </a>
-              <a className="inline-flex min-h-13 items-center px-3 text-sm font-[750] text-forest" href="https://github.com/thoriqakbar0/garden/blob/main/README.md" target="_blank" rel="noreferrer">
-                Read the Garden documentation
+              <a className="inline-flex min-h-13 items-center gap-2 px-3 text-sm font-[750] text-forest" href="https://github.com/thoriqakbar0/garden/blob/main/README.md" target="_blank" rel="noreferrer">
+                Read the Garden documentation <ExternalLinkCue />
               </a>
             </div>
           </div>
@@ -303,9 +306,9 @@ export function Home() {
             <span>Eve is the complete framework and runtime by Vercel.</span>
           </p>
           <div className="flex justify-end gap-6 max-[48rem]:flex-wrap max-[48rem]:justify-start">
-            <a className="inline-flex min-h-11 items-center text-xs font-[650]" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">Compatibility</a>
-            <a className="inline-flex min-h-11 items-center text-xs font-[650]" href="https://github.com/thoriqakbar0/garden/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">Licenses</a>
-            <a className="inline-flex min-h-11 items-center text-xs font-[650]" href={githubUrl} target="_blank" rel="noreferrer">Source</a>
+            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href="https://github.com/thoriqakbar0/garden/blob/main/COMPATIBILITY.md" target="_blank" rel="noreferrer">Compatibility <ExternalLinkCue /></a>
+            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href="https://github.com/thoriqakbar0/garden/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noreferrer">Licenses <ExternalLinkCue /></a>
+            <a className="inline-flex min-h-11 items-center gap-1.5 text-xs font-[650]" href={githubUrl} target="_blank" rel="noreferrer">Source <ExternalLinkCue /></a>
           </div>
         </div>
       </footer>

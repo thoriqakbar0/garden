@@ -12,6 +12,7 @@ related_targets: ["website/src/styles.css","website/src/dithered-field.tsx","web
 - Job: understand the two honest paths—Garden’s native Eve-compatible Go subset or supervised project-local Eve by Vercel—then install or inspect the source.
 - Positioning: lead with “Run Eve on your infrastructure.” Attribute the complete framework to Eve by Vercel and describe Garden as the self-hosted Go runtime for compatible agents.
 - Primary action: install Garden from source. Secondary proof: compatibility and test inventories.
+- External links: pair every new-tab link with the shared external-link cue and hidden “opens in a new tab” text; reserve the right-arrow icon for movement within the page.
 - Constraints: no fabricated customers, benchmarks, hosted-service, or Cloudflare deployment claims; product truth comes from README.md and compatibility docs.
 - Direction: Cultivated systems — field-note surfaces, forest ink, acid-leaf signals, CSS botanical geometry and shared dithered wheat and treetop footage without decorative SVG illustrations.
 - Styling: use Tailwind CSS utilities by default and migrate touched styles; reserve custom CSS for the shader, botanical geometry, and other effects Tailwind cannot express clearly.
