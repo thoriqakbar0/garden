@@ -24,12 +24,14 @@ Garden is a self-hosted Go alternative rather than a hosted agent platform. It r
 
 ## Operating context
 
-Garden is installed from source with `make install`, used from a terminal, and pointed at an Eve-shaped project containing `agent/`. Garden requires Go 1.25+ plus Codex or an OpenAI-compatible endpoint. Supervising Eve with `--runtime eve` instead requires Node 24 and project-local `eve@0.27.6`.
+Garden is installed from source with `make install`, used from a terminal, and pointed at an Eve-shaped project containing `agent/`. Garden requires Go 1.25+ plus Codex or credentials for a native OpenAI, Anthropic, Google, or OpenAI-compatible provider. Supervising Eve with `--runtime eve` instead requires Node 24 and project-local `eve@0.27.6`.
 
 ## Capabilities and constraints
 
 - When Garden launches Eve, Eve owns authored semantics and runtime behavior.
 - Garden supports sessions, streaming, tool/model turns, cancellation, and local recovery, but not arbitrary authored TypeScript.
+- Native OpenAI, Anthropic, and Google model providers support the shared model and native-tool loop; OpenAI-compatible endpoints remain supported.
+- Provider responses normalize provider/model identity, stop reason, and token/cache usage into durable Eve step metadata.
 - Cloudflare model endpoints and AI Gateway are supported model connections.
 - Cloudflare deployment is not implemented and must not be represented as available.
 - Distributed storage is not implemented.

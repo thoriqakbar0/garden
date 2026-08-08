@@ -24,7 +24,7 @@ Choose the implementation that matches the project:
   semantics, and sandboxing.
 - **Garden:** use the self-hosted Go alternative for the smaller compatible
   contract documented here. Garden runs as one process with local workflow
-  storage and either the Codex CLI or an OpenAI-compatible model endpoint.
+  storage and either the Codex CLI or a native OpenAI, Anthropic, Google, or OpenAI-compatible model endpoint.
 
 Garden can also launch a pinned project-local copy of Eve with `--runtime eve`.
 That path is still Eve: Garden only validates and supervises the process. It is
@@ -51,7 +51,7 @@ narrower contract described below and does not claim complete Eve parity.
 | Authored TypeScript | Eve | Tools, hooks, channels, connections, subagents, schedules, sandboxes, and other supported Eve modules execute unchanged. |
 | Sandboxed terminal | Eve | Eve's built-in terminal tools use the agent's authored or default Eve sandbox backend and session-scoped `/workspace`. |
 | Eve project discovery | Available | Discovers instructions, model, tools, skills, channels, connections, subagents, schedules, and evals. |
-| Model execution | Available | Sandboxed Codex CLI execution and OpenAI Chat Completions-compatible endpoints. |
+| Model execution | Available | Sandboxed Codex CLI execution plus native OpenAI, Anthropic, Google, and OpenAI Chat Completions-compatible providers. |
 | Native tool loop | Available | Model -> tool -> model with bounded requests, deadlines, cancellation, and durable Eve events. |
 | Codex terminal | Available | Codex may run terminal commands inside the project sandbox; command text and output are not copied into Garden's durable log. |
 | Eve HTTP sessions | Available | Create, continue, stream, and cancel routes with protocol-v19 envelopes and headers. |
@@ -73,7 +73,7 @@ For native mode you need:
 
 - Go 1.25 or newer;
 - macOS or Linux; and
-- either a Codex login or an OpenAI-compatible model endpoint.
+- either a Codex login or credentials for OpenAI, Anthropic, Google, or an OpenAI-compatible endpoint.
 
 Running Eve through Garden instead needs Node 24 or newer and project-local
 `eve@0.27.6`.
@@ -200,11 +200,15 @@ intended external authorization.
 
 | Variable | Meaning |
 | --- | --- |
-| `GARDEN_MODEL_BACKEND` | Optional explicit selection: `openai` or `codex`. When empty, Garden selects Codex if `codex` is on `PATH`. |
-| `GARDEN_MODEL` | Optional model override. When unset, `openai` uses the literal model discovered in `agent/agent.ts`; `codex` defaults to `gpt-5.6-sol`. |
+| `GARDEN_MODEL_BACKEND` | Optional explicit selection: `openai`, `anthropic`, `google`, or `codex`. When empty, Garden selects Codex if `codex` is on `PATH`. |
+| `GARDEN_MODEL` | Optional model override. When unset, native providers use the literal model discovered in `agent/agent.ts`; a matching `openai/`, `anthropic/`, or `google/` prefix is removed before its native API call. `codex` defaults to `gpt-5.6-sol`. |
 | `GARDEN_CODEX_SANDBOX` | Optional Codex terminal policy: `workspace-write` (default) or `read-only`. Garden rejects `danger-full-access`. |
 | `GARDEN_OPENAI_BASE_URL` | OpenAI-compatible API base. Defaults to `https://api.openai.com/v1` when an API key is set. |
 | `GARDEN_OPENAI_API_KEY` | Optional upstream bearer credential; local endpoints and Cloudflare Gateway BYOK may omit it. |
+| `GARDEN_ANTHROPIC_BASE_URL` | Anthropic Messages API base. Defaults to `https://api.anthropic.com/v1`. |
+| `GARDEN_ANTHROPIC_API_KEY` | Required credential for the native Anthropic provider. |
+| `GARDEN_GOOGLE_BASE_URL` | Google Generative Language API base. Defaults to `https://generativelanguage.googleapis.com/v1beta`. |
+| `GARDEN_GOOGLE_API_KEY` | Required credential for the native Google provider; sent as `x-goog-api-key`, never in the request URL. |
 | `GARDEN_CLOUDFLARE_GATEWAY_TOKEN` | Optional Cloudflare AI Gateway credential, sent only as `cf-aig-authorization`. |
 | `CODEX_HOME` | Codex state directory, default `~/.codex`. |
 | `GARDEN_AUTH_TOKEN` | Required bearer token when `serve` binds beyond loopback. |
@@ -221,6 +225,23 @@ Use read-only terminal access when the agent should inspect but never edit:
 
 ```sh
 export GARDEN_CODEX_SANDBOX=read-only
+```
+
+Run the authored `anthropic/claude-sonnet-5` model through Anthropic's native Messages API:
+
+```sh
+export GARDEN_MODEL_BACKEND=anthropic
+export GARDEN_ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+./garden run --root examples/eve-weather --message "Weather in Jakarta?"
+```
+
+Use Google's native `generateContent` API by selecting a Gemini model explicitly:
+
+```sh
+export GARDEN_MODEL_BACKEND=google
+export GARDEN_GOOGLE_API_KEY="$GOOGLE_API_KEY"
+export GARDEN_MODEL=google/gemini-2.5-flash
+./garden run --root examples/eve-weather --message "Weather in Jakarta?"
 ```
 
 OpenRouter's free-model router works through the same adapter:
@@ -256,13 +277,13 @@ The adapter accepts both standard JSON-object tool arguments and the
 string-wrapped arguments returned by some compatible providers. Assistant tool
 messages include explicit empty content for providers that require it.
 
-OpenAI-compatible requests, responses, and native tool payloads are bounded to
-1 MiB. Each OpenAI model or tool step has a 60-second deadline and one turn may
-use at most eight model rounds. Codex prompts and individual JSON event records
+Provider requests, responses, and native tool payloads are bounded to 1 MiB.
+Each OpenAI, Anthropic, or Google model or tool step has a 60-second deadline,
+and one turn may use at most eight model rounds. Codex prompts and individual JSON event records
 are also bounded to 1 MiB. Credentials and upstream response bodies are not
 included in public errors.
 
-For the `openai` backend, the compiled manifest currently binds only
+For the native provider backends, the compiled manifest currently binds only
 `get_weather`. It returns fixture data to prove the execution boundary. A
 declared tool without a native binding causes startup to fail. The `codex`
 backend instead uses Codex's sandboxed terminal runtime.
@@ -358,8 +379,9 @@ my-agent/
 
 Garden statically reads paths and selected literal configuration. JavaScript
 and TypeScript files are declarations, not automatically executable modules.
-The OpenAI backend selects native tool bindings by discovered identifier; the
-Codex backend can inspect and operate on the project through its terminal.
+The OpenAI, Anthropic, and Google providers select native tool bindings by
+discovered identifier; the Codex backend can inspect and operate on the project
+through its terminal.
 
 ## Workflow integrity
 
@@ -377,7 +399,7 @@ Cancellation does not return `accepted` until its intent is durable. Settlement
 then ends with exactly one `turn.cancelled` and the following
 `session.waiting`; recovery finishes that boundary after a crash.
 
-OpenAI native-tool arguments and results remain durable internal events. Codex
+Native-provider tool arguments and results remain durable internal events. Codex
 terminal commands record lifecycle and exit status but deliberately omit the
 command text and output from Garden's durable log. The HTTP stream exposes only
 event types proven by the pinned Eve-v19 contract, and its absolute and negative
@@ -417,8 +439,8 @@ TypeScript plus sandbox execution through Eve. See
 [`TESTING.md`](TESTING.md) for every test, validation tier, live-provider smoke
 command, and remaining evidence gap.
 
-The hermetic suite covers discovery, the OpenAI-compatible provider, sandboxed
-Codex execution, the native tool loop, protocol-v19 create/continue/stream/cancel,
+The hermetic suite covers discovery, native OpenAI, Anthropic, and Google
+providers, OpenAI-compatible endpoints, sandboxed Codex execution, the native tool loop, protocol-v19 create/continue/stream/cancel,
 live flushing, cursor resume, continuation ownership, cancellation races,
 session traversal rejection, concurrent sessions, and restart repair.
 

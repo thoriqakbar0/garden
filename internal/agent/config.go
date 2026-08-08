@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	defaultOpenAIBase = "https://api.openai.com/v1"
-	defaultCodexModel = "gpt-5.6-sol"
+	defaultOpenAIBase    = "https://api.openai.com/v1"
+	defaultAnthropicBase = "https://api.anthropic.com/v1"
+	defaultGoogleBase    = "https://generativelanguage.googleapis.com/v1beta"
+	defaultCodexModel    = "gpt-5.6-sol"
 )
 
 // RunnerFromEnvironment configures the workflow runner used by CLI and HTTP modes.
@@ -76,8 +78,10 @@ func runnerFromConfig(app discover.Application, getenv func(string) string, clie
 		modelName = app.Model
 	}
 	var backend model
+	var provider providerID
 	switch backendName {
 	case "openai":
+		provider = providerCompatible
 		base := strings.TrimSpace(getenv("GARDEN_OPENAI_BASE_URL"))
 		apiKey := getenv("GARDEN_OPENAI_API_KEY")
 		if base == "" && apiKey != "" {
@@ -85,6 +89,9 @@ func runnerFromConfig(app discover.Application, getenv func(string) string, clie
 		}
 		if base == "" {
 			return nil, errors.New("openai backend requires GARDEN_OPENAI_BASE_URL or GARDEN_OPENAI_API_KEY")
+		}
+		if sameBaseURL(base, defaultOpenAIBase) {
+			provider = providerOpenAI
 		}
 		endpoint, err := endpointURL(base, "chat/completions")
 		if err != nil {
@@ -94,11 +101,63 @@ func runnerFromConfig(app discover.Application, getenv func(string) string, clie
 		if token := strings.TrimSpace(getenv("GARDEN_CLOUDFLARE_GATEWAY_TOKEN")); token != "" {
 			headers["cf-aig-authorization"] = "Bearer " + token
 		}
-		backend = &openAIModel{client: client, endpoint: endpoint, apiKey: apiKey, headers: headers}
+		backend = &openAIModel{
+			client: client, endpoint: endpoint, apiKey: apiKey,
+			headers: headers, provider: provider,
+		}
+	case "anthropic":
+		provider = providerAnthropic
+		apiKey := getenv("GARDEN_ANTHROPIC_API_KEY")
+		if strings.TrimSpace(apiKey) == "" {
+			return nil, errors.New("anthropic backend requires GARDEN_ANTHROPIC_API_KEY")
+		}
+		base := strings.TrimSpace(getenv("GARDEN_ANTHROPIC_BASE_URL"))
+		if base == "" {
+			base = defaultAnthropicBase
+		}
+		endpoint, err := endpointURL(base, "messages")
+		if err != nil {
+			return nil, fmt.Errorf("invalid GARDEN_ANTHROPIC_BASE_URL: %w", err)
+		}
+		backend = &anthropicModel{client: client, endpoint: endpoint, apiKey: apiKey}
+	case "google":
+		provider = providerGoogle
+		apiKey := getenv("GARDEN_GOOGLE_API_KEY")
+		if strings.TrimSpace(apiKey) == "" {
+			return nil, errors.New("google backend requires GARDEN_GOOGLE_API_KEY")
+		}
+		base := strings.TrimSpace(getenv("GARDEN_GOOGLE_BASE_URL"))
+		if base == "" {
+			base = defaultGoogleBase
+		}
+		validated, err := validatedBaseURL(base)
+		if err != nil {
+			return nil, fmt.Errorf("invalid GARDEN_GOOGLE_BASE_URL: %w", err)
+		}
+		backend = newGoogleModel(client, validated, apiKey)
 	default:
-		return nil, errors.New("GARDEN_MODEL_BACKEND must be set to openai or codex")
+		return nil, errors.New("GARDEN_MODEL_BACKEND must be set to openai, anthropic, google, or codex")
 	}
+	modelName = normalizeModelID(provider, modelName)
 	return NewRunner(app, backend, modelName, NativeManifest())
+}
+
+func sameBaseURL(left, right string) bool {
+	leftURL, leftErr := validatedBaseURL(left)
+	rightURL, rightErr := validatedBaseURL(right)
+	return leftErr == nil && rightErr == nil && leftURL == rightURL
+}
+
+func validatedBaseURL(base string) (string, error) {
+	parsed, err := url.Parse(base)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return "", errors.New("must be an absolute HTTP(S) URL")
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", errors.New("must not contain credentials, query, or fragment")
+	}
+	parsed.Path = strings.TrimRight(parsed.Path, "/")
+	return parsed.String(), nil
 }
 
 func endpointURL(base, suffix string) (string, error) {

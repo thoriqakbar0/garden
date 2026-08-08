@@ -151,10 +151,19 @@ type MessageCompletedData struct {
 
 // StepCompletedData marks a successfully completed deterministic step.
 type StepCompletedData struct {
-	FinishReason string `json:"finishReason"`
-	Sequence     int    `json:"sequence"`
-	StepIndex    int    `json:"stepIndex"`
-	TurnID       string `json:"turnId"`
+	FinishReason string     `json:"finishReason"`
+	Sequence     int        `json:"sequence"`
+	StepIndex    int        `json:"stepIndex"`
+	TurnID       string     `json:"turnId"`
+	Usage        *StepUsage `json:"usage,omitempty"`
+}
+
+// StepUsage is the provider-neutral token accounting allowed by Eve v19.
+type StepUsage struct {
+	InputTokens      int `json:"inputTokens,omitempty"`
+	OutputTokens     int `json:"outputTokens,omitempty"`
+	CacheReadTokens  int `json:"cacheReadTokens,omitempty"`
+	CacheWriteTokens int `json:"cacheWriteTokens,omitempty"`
 }
 
 // SessionWaitingData carries the token for the next user message.

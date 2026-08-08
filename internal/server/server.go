@@ -258,10 +258,28 @@ func publicEvent(event workflow.Event) (protocol.Event, bool, error) {
 			return protocol.Event{}, false, err
 		}
 		projected.Data = encoded
+	case protocol.MessageCompleted:
+		var data protocol.MessageCompletedData
+		if err := json.Unmarshal(event.Data, &data); err != nil {
+			return protocol.Event{}, false, err
+		}
+		encoded, err := json.Marshal(data)
+		if err != nil {
+			return protocol.Event{}, false, err
+		}
+		projected.Data = encoded
+	case protocol.StepCompleted:
+		var data protocol.StepCompletedData
+		if err := json.Unmarshal(event.Data, &data); err != nil {
+			return protocol.Event{}, false, err
+		}
+		encoded, err := json.Marshal(data)
+		if err != nil {
+			return protocol.Event{}, false, err
+		}
+		projected.Data = encoded
 	case protocol.StepStarted,
 		protocol.MessageAppended,
-		protocol.MessageCompleted,
-		protocol.StepCompleted,
 		protocol.TurnCompleted,
 		protocol.TurnCancelled,
 		protocol.TurnFailed,

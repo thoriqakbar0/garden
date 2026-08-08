@@ -45,9 +45,9 @@ differential evidence only when both targets are set and both tests pass.
 
 ## Live provider smoke tests
 
-The provider adapter is hermetically tested with fake OpenAI-compatible servers.
-Real-provider smoke tests remain opt-in because they consume an account quota.
-Build once, then use either configuration:
+The OpenAI-compatible, native Anthropic, and native Google adapters are
+hermetically tested with fake servers. Real-provider smoke tests remain opt-in
+because they consume account quota. Build once, then use one configuration:
 
 ```sh
 make build
@@ -65,6 +65,18 @@ GARDEN_OPENAI_BASE_URL="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLAR
 GARDEN_OPENAI_API_KEY="$CLOUDFLARE_API_TOKEN" \
 GARDEN_MODEL=@cf/ibm-granite/granite-4.0-h-micro \
   ./garden run --root examples/eve-weather --message "Weather in Jakarta?"
+
+# Anthropic Messages API
+GARDEN_MODEL_BACKEND=anthropic \
+GARDEN_ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+GARDEN_MODEL=anthropic/claude-sonnet-4-6 \
+  ./garden run --root examples/eve-weather --message "Weather in Jakarta?"
+
+# Google generateContent API
+GARDEN_MODEL_BACKEND=google \
+GARDEN_GOOGLE_API_KEY="$GOOGLE_API_KEY" \
+GARDEN_MODEL=google/gemini-2.5-flash \
+  ./garden run --root examples/eve-weather --message "Weather in Jakarta?"
 ```
 
 For authenticated Cloudflare AI Gateway `/compat`, also set
@@ -79,14 +91,14 @@ For authenticated Cloudflare AI Gateway `/compat`, also set
   externally started fixtures.
 - Native mode does not resume the final model step after a crash following a
   durable tool result; it settles the interrupted turn without replaying tools.
-- OpenRouter and Cloudflare live calls are opt-in, not CI gates. Their request
-  shapes, headers, double-encoded arguments, tool-result correlation, and error
-  safety are covered hermetically.
+- OpenRouter, Cloudflare, Anthropic, and Google live calls are opt-in, not CI
+  gates. Their request shapes, headers, tool-result correlation, provider
+  metadata, usage normalization, and error safety are covered hermetically.
 
 ## Complete Go test inventory
 
 The authoritative live inventory is `make list-tests`. At this revision there
-are 76 top-level tests; table-driven subcases add further scenarios.
+are 95 top-level tests; table-driven subcases add further scenarios.
 
 ### `cmd/eve/main_test.go` (10)
 
@@ -109,10 +121,13 @@ are 76 top-level tests; table-driven subcases add further scenarios.
 
 - `TestOfficialEveShapeIsRunnableByGarden`
 
-### `internal/agent/agent_test.go` (13)
+### `internal/agent/agent_test.go` (16)
 
 - `TestOpenAIWeatherToolRoundTrip`
+- `TestOpenAIMetadataIsNormalized`
+- `TestOpenAICompatibleMetadataAndUsageRemainDurable`
 - `TestRunnerEmitsEveToolLifecycle`
+- `TestRunnerEmitsNormalizedProviderMetadata`
 - `TestConversationExcludesInterruptedTurns`
 - `TestRejectsUnimplementedAndUndeclaredTools`
 - `TestRejectsMalformedAndDuplicateToolCalls`
@@ -124,6 +139,33 @@ are 76 top-level tests; table-driven subcases add further scenarios.
 - `TestConfigurationIsExplicit`
 - `TestCompletedHistoryIsSentInSessionOrder`
 - `TestModelRoundsAreCapped`
+
+### `internal/agent/anthropic_test.go` (4)
+
+- `TestAnthropicMessagesToolRoundTripAndMetadata`
+- `TestAnthropicMessagesTextAndStopReason`
+- `TestAnthropicMessagesErrorsAreSafeAndBounded`
+- `TestAnthropicMessagesCancellation`
+
+### `internal/agent/google_test.go` (5)
+
+- `TestGoogleGenerateContentToolRoundTrip`
+- `TestGoogleBuildsModelEndpointAndKeepsKeyOutOfURL`
+- `TestGoogleToolCallIDsAreUniqueDuringConcurrentCalls`
+- `TestGoogleErrorsAreSafeAndCancellationPropagates`
+- `TestGoogleRejectsInvalidHistoryAndResponsePayloads`
+
+### `internal/agent/native_provider_contract_test.go` (1)
+
+- `TestNativeProviderToolContinuationContract`
+
+### `internal/agent/provider_test.go` (5)
+
+- `TestNormalizeModelIDOnlyStripsMatchingNativeProvider`
+- `TestProviderProfilesDeclareCapabilities`
+- `TestProviderStopReasonsAreStrict`
+- `TestProviderConfigurationSelectsNativeAdapters`
+- `TestNativeProviderConfigurationRequiresCredentials`
 
 ### `internal/agent/codex_exec_test.go` (9)
 
@@ -161,6 +203,10 @@ are 76 top-level tests; table-driven subcases add further scenarios.
 ### `internal/evehost/official_integration_test.go` (1)
 
 - `TestOfficialEveAuthoredTypeScriptAndSandboxTerminal`
+
+### `internal/server/projection_internal_test.go` (1)
+
+- `TestPublicEventStripsGardenProviderMetadata`
 
 ### `internal/server/server_test.go` (7)
 

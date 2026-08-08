@@ -157,7 +157,7 @@ export function Home() {
                 </p>
                 <div className="mt-8 overflow-x-auto rounded-[var(--radius-sm)] bg-[oklch(0.99_0.007_96/0.72)] p-4 font-mono text-xs"><code>garden serve</code></div>
                 <ul className="mt-8 grid list-none gap-3 p-0 text-sm text-ink-soft" aria-label="Garden characteristics">
-                  <li className="mode-item flex items-center gap-2.5">Codex or OpenAI-compatible models</li>
+                  <li className="mode-item flex items-center gap-2.5">OpenAI, Anthropic, Google, or Codex</li>
                   <li className="mode-item flex items-center gap-2.5">Fsync-backed local workflow history</li>
                   <li className="mode-item flex items-center gap-2.5">Loopback by default</li>
                 </ul>

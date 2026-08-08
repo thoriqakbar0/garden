@@ -39,12 +39,14 @@ type message struct {
 	Content    string
 	ToolCalls  []toolCall
 	ToolCallID string
+	Metadata   modelMetadata
 }
 
 type toolCall struct {
-	ID        string
-	Name      string
-	Arguments json.RawMessage
+	ID           string
+	Name         string
+	Arguments    json.RawMessage
+	ProviderData json.RawMessage
 }
 
 type modelRequest struct {
@@ -89,8 +91,8 @@ func validateAssistant(result message) error {
 	}
 	hasContent := strings.TrimSpace(result.Content) != ""
 	hasCalls := len(result.ToolCalls) > 0
-	if hasContent == hasCalls {
-		return errors.New("model assistant message must contain either text or tool calls")
+	if !hasContent && !hasCalls {
+		return errors.New("model assistant message must contain text or tool calls")
 	}
 	seen := make(map[string]struct{}, len(result.ToolCalls))
 	for _, call := range result.ToolCalls {
@@ -106,6 +108,10 @@ func validateAssistant(result message) error {
 		}
 		if len(call.Arguments) == 0 || len(call.Arguments) > maxPayloadBytes || !json.Valid(call.Arguments) {
 			return fmt.Errorf("model returned invalid arguments for tool %q", call.Name)
+		}
+		if len(call.ProviderData) > maxPayloadBytes ||
+			(len(call.ProviderData) > 0 && !json.Valid(call.ProviderData)) {
+			return fmt.Errorf("model returned invalid provider data for tool %q", call.Name)
 		}
 		var object map[string]json.RawMessage
 		if err := json.Unmarshal(call.Arguments, &object); err != nil || object == nil {

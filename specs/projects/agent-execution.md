@@ -5,8 +5,8 @@
 This document specifies native mode. Exact authored Eve execution is a separate
 contract in [Official Eve host](official-eve-host.md).
 
-Run one real agent turn through an OpenAI-compatible model and an explicitly
-supported native tool:
+Run one real agent turn through a selected native model provider and an
+explicitly supported native tool:
 
 ```text
 user message
@@ -23,21 +23,31 @@ the second model request makes the integration test fail.
 
 ## Model boundary
 
-The initial model adapter uses the OpenAI Chat Completions-compatible HTTP
-shape. Configuration is explicit:
+Garden owns a provider-neutral model and native-tool loop with explicit native
+adapters for OpenAI Chat Completions, Anthropic Messages, and Google
+`generateContent`. OpenAI-compatible endpoints reuse the OpenAI adapter. Codex
+remains a separate execution backend because it owns terminal and sandbox
+semantics for the complete turn.
+
+Configuration is explicit:
 
 | Variable | Meaning |
 | --- | --- |
-| `GARDEN_OPENAI_BASE_URL` | Compatible API base URL |
-| `GARDEN_OPENAI_API_KEY` | Optional upstream bearer credential |
+| `GARDEN_MODEL_BACKEND` | `openai`, `anthropic`, `google`, or `codex` |
+| `GARDEN_MODEL` | Model override; matching native-provider prefixes are removed before the API call |
+| `GARDEN_OPENAI_BASE_URL` / `GARDEN_OPENAI_API_KEY` | Compatible API base and optional bearer credential |
+| `GARDEN_ANTHROPIC_BASE_URL` / `GARDEN_ANTHROPIC_API_KEY` | Anthropic Messages base and required credential |
+| `GARDEN_GOOGLE_BASE_URL` / `GARDEN_GOOGLE_API_KEY` | Google Generative Language base and required credential |
 | `GARDEN_CLOUDFLARE_GATEWAY_TOKEN` | Optional Cloudflare AI Gateway credential for `cf-aig-authorization` |
-| `GARDEN_MODEL` | Model override for endpoints that do not use the authored identifier |
 
-If only the API key is set, Garden MAY default the base URL to the OpenAI API.
-If no usable endpoint/model configuration exists, normal agent execution MUST
-fail clearly; it MUST NOT silently return an echo response.
+A native adapter MUST preserve system instructions, assistant tool calls, and
+correlated tool results in its provider-specific request shape. It MUST normalize
+provider/model identity, response ID, stop reason, and token/cache usage for
+Garden's durable internal step metadata. If no usable endpoint/model
+configuration exists, normal agent execution MUST fail clearly; it MUST NOT
+silently return an echo response.
 
-The adapter MUST:
+Each adapter MUST:
 
 - bound request and response bodies;
 - reject invalid or ambiguous model messages;
@@ -118,14 +128,16 @@ richer, but the HTTP layer must not leak Garden-only protocol types.
 
 ## Required tests
 
-Hermetic tests MUST use a fake OpenAI-compatible server and the real
-`examples/eve-weather` project. They must prove:
+Hermetic tests MUST use fake OpenAI-compatible, Anthropic, and Google servers;
+the OpenAI vertical slice also uses the real `examples/eve-weather` project.
+They must prove:
 
-- exactly two model requests for the one-tool scenario;
-- the first request contains instructions and `get_weather`;
+- exactly two model requests for each one-tool provider scenario;
+- the first request contains instructions and `get_weather` in the provider's native schema;
 - the model-requested arguments reach the native tool;
 - the second request contains the original assistant tool call and correlated
-  JSON tool result;
+  JSON tool result in the provider's native schema;
+- provider identity, response ID, stop reason, and usage are normalized;
 - the final assistant response is persisted and returned;
 - undeclared and unimplemented tools are rejected;
 - malformed model and tool payloads are rejected;

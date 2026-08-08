@@ -45,7 +45,7 @@ merely discovered, or absent.
 | --- | --- | --- | --- |
 | Project discovery and TypeScript compilation | Delegated | Pinned CLI validation; parity fixture discovers authored `.ts` tools | Partial nested-layout discovery; no compilation or flat-layout grammar |
 | Markdown and TypeScript instructions, composition, dynamic instructions | Delegated | Process-level delegation only | Markdown `agent/instructions.md` only |
-| Authored model configuration and AI SDK models | Delegated | Credential-free authored `mockModel` fixture | Partial literal model discovery plus Codex or OpenAI-compatible override |
+| Authored model configuration and AI SDK models | Delegated | Credential-free authored `mockModel` fixture | Partial literal model discovery plus Codex, native OpenAI/Anthropic/Google, or OpenAI-compatible override |
 | Multi-step model/tool loop | Delegated | Parity fixture proves Bash → TypeScript tool → final model response | Supported, bounded to eight model rounds |
 | Compaction, token limits, structured output | Delegated | Not independently covered by Garden | Unsupported |
 | Static and dynamic authored tools | Delegated | Static TypeScript tool proven end to end | Native bindings only; currently `get_weather` |

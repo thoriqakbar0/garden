@@ -131,19 +131,31 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 			}); err != nil {
 				return "", err
 			}
-			if err := emit("message.completed", map[string]any{
-				"finishReason": "stop", "message": result.Content,
+			finishReason := result.Metadata.StopReason
+			if len(result.ToolCalls) > 0 {
+				finishReason = "tool-calls"
+			} else if finishReason == "" {
+				finishReason = "stop"
+			}
+			messageCompleted := map[string]any{
+				"finishReason": finishReason, "message": result.Content,
 				"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-			}); err != nil {
+			}
+			addModelMetadata(messageCompleted, result.Metadata)
+			if err := emit("message.completed", messageCompleted); err != nil {
 				return "", err
 			}
-			if err := emit("step.completed", map[string]any{
-				"finishReason": "stop", "sequence": turn.Sequence,
-				"stepIndex": stepIndex, "turnId": turn.TurnID,
-			}); err != nil {
-				return "", err
+			if len(result.ToolCalls) == 0 {
+				stepCompleted := map[string]any{
+					"finishReason": finishReason, "sequence": turn.Sequence,
+					"stepIndex": stepIndex, "turnId": turn.TurnID,
+				}
+				addModelMetadata(stepCompleted, result.Metadata)
+				if err := emit("step.completed", stepCompleted); err != nil {
+					return "", err
+				}
+				return result.Content, nil
 			}
-			return result.Content, nil
 		}
 
 		actions := make([]actionRequest, 0, len(result.ToolCalls))
@@ -152,7 +164,8 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 				return "", fmt.Errorf("model requested undeclared tool %q", call.Name)
 			}
 			actions = append(actions, actionRequest{
-				CallID: call.ID, Input: call.Arguments, Kind: "tool-call", ToolName: call.Name,
+				CallID: call.ID, Input: call.Arguments, Kind: "tool-call",
+				ProviderData: call.ProviderData, ToolName: call.Name,
 			})
 		}
 		if err := emit("actions.requested", map[string]any{
@@ -161,10 +174,12 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 		}); err != nil {
 			return "", err
 		}
-		if err := emit("step.completed", map[string]any{
+		stepCompleted := map[string]any{
 			"finishReason": "tool-calls", "sequence": turn.Sequence,
 			"stepIndex": stepIndex, "turnId": turn.TurnID,
-		}); err != nil {
+		}
+		addModelMetadata(stepCompleted, result.Metadata)
+		if err := emit("step.completed", stepCompleted); err != nil {
 			return "", err
 		}
 		messages = append(messages, result)
@@ -224,10 +239,11 @@ func (r *Runner) executeTool(ctx context.Context, tool Tool, arguments json.RawM
 }
 
 type actionRequest struct {
-	CallID   string          `json:"callId"`
-	Input    json.RawMessage `json:"input"`
-	Kind     string          `json:"kind"`
-	ToolName string          `json:"toolName"`
+	CallID       string          `json:"callId"`
+	Input        json.RawMessage `json:"input"`
+	Kind         string          `json:"kind"`
+	ProviderData json.RawMessage `json:"providerData,omitempty"`
+	ToolName     string          `json:"toolName"`
 }
 
 type actionResult struct {
@@ -272,9 +288,18 @@ func conversation(events []workflow.Event) ([]message, error) {
 			for _, action := range data.Actions {
 				calls = append(calls, toolCall{
 					ID: action.CallID, Name: action.ToolName, Arguments: action.Input,
+					ProviderData: action.ProviderData,
 				})
 			}
-			pending[event.TurnID] = append(pending[event.TurnID], message{Role: "assistant", ToolCalls: calls})
+			turnMessages := pending[event.TurnID]
+			if len(turnMessages) > 0 && turnMessages[len(turnMessages)-1].Role == "assistant" &&
+				turnMessages[len(turnMessages)-1].Content != "" &&
+				len(turnMessages[len(turnMessages)-1].ToolCalls) == 0 {
+				turnMessages[len(turnMessages)-1].ToolCalls = calls
+				pending[event.TurnID] = turnMessages
+			} else {
+				pending[event.TurnID] = append(turnMessages, message{Role: "assistant", ToolCalls: calls})
+			}
 		case "action.result":
 			var data struct {
 				Result actionResult `json:"result"`

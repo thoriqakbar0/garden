@@ -32,7 +32,7 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 		mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		if number == 1 {
-			fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":null,"tool_calls":[{"id":"weather-1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Jakarta\"}"}}]}}]}`)
+			fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"Checking.","tool_calls":[{"id":"weather-1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Jakarta\"}"}}]},"finish_reason":"tool_calls"}]}`)
 			return
 		}
 		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"It is sunny in Jakarta."}}]}`)
@@ -79,7 +79,7 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 	secondMessages := requests[1]["messages"].([]any)
 	assistant := secondMessages[len(secondMessages)-2].(map[string]any)
 	toolResult := secondMessages[len(secondMessages)-1].(map[string]any)
-	if assistant["role"] != "assistant" || assistant["content"] != "" || toolResult["role"] != "tool" ||
+	if assistant["role"] != "assistant" || assistant["content"] != "Checking." || toolResult["role"] != "tool" ||
 		toolResult["tool_call_id"] != "weather-1" ||
 		!strings.Contains(toolResult["content"].(string), `"city":"Jakarta"`) {
 		t.Fatalf("uncorrelated second request: %#v", secondMessages)
@@ -96,6 +96,67 @@ func TestOpenAIWeatherToolRoundTrip(t *testing.T) {
 		if got := events[len(events)-len(wantTail)+index].Type; got != want {
 			t.Fatalf("event tail[%d] = %q, want %q", index, got, want)
 		}
+	}
+}
+
+func TestOpenAIMetadataIsNormalized(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id":"resp-1","model":"gpt-response","choices":[{"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":11,"completion_tokens":3,"prompt_tokens_details":{"cached_tokens":4}}}`)
+	}))
+	defer server.Close()
+
+	result, err := (&openAIModel{
+		client: server.Client(), endpoint: server.URL, apiKey: "test", provider: providerOpenAI,
+	}).Complete(context.Background(), modelRequest{Model: "gpt-request", Instructions: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata := result.Metadata
+	if metadata.Provider != providerOpenAI || metadata.API != "openai-chat-completions" ||
+		metadata.Model != "gpt-response" || metadata.ResponseID != "resp-1" ||
+		metadata.StopReason != "stop" || metadata.Usage.Input != 7 ||
+		metadata.Usage.Output != 3 || metadata.Usage.CacheRead != 4 {
+		t.Fatalf("metadata = %#v", metadata)
+	}
+}
+
+func TestOpenAICompatibleMetadataAndUsageRemainDurable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"id":"router-response","model":"routed-model","choices":[{"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":5,"completion_tokens":2,"prompt_tokens_details":{"cached_tokens":2}}}`)
+	}))
+	defer server.Close()
+
+	runner, err := runnerFromConfig(
+		discover.Application{Instructions: "test", Model: "router/model"},
+		env(map[string]string{
+			"GARDEN_MODEL_BACKEND":   "openai",
+			"GARDEN_OPENAI_BASE_URL": server.URL,
+		}), server.Client(), time.Now(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var completed map[string]any
+	_, err = runner.Run(context.Background(), workflow.Turn{Message: "hello"}, func(eventType string, data any) error {
+		if eventType == "step.completed" {
+			completed = data.(map[string]any)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata := completed["providerMetadata"].(map[string]any)
+	usage := completed["usage"].(map[string]int)
+	if metadata["provider"] != "openai-compatible" || metadata["api"] != "openai-chat-completions" ||
+		metadata["model"] != "routed-model" || metadata["responseId"] != "router-response" {
+		t.Fatalf("provider metadata = %#v", metadata)
+	}
+	if usage["inputTokens"] != 5 || usage["outputTokens"] != 2 ||
+		usage["cacheReadTokens"] != 2 || usage["totalTokens"] != 7 {
+		t.Fatalf("usage = %#v", usage)
 	}
 }
 
@@ -131,6 +192,44 @@ func TestRunnerEmitsEveToolLifecycle(t *testing.T) {
 	}
 	if fmt.Sprint(eventTypes) != fmt.Sprint(want) {
 		t.Fatalf("event types = %v, want %v", eventTypes, want)
+	}
+}
+
+func TestRunnerEmitsNormalizedProviderMetadata(t *testing.T) {
+	backend := staticModel{result: message{
+		Role: "assistant", Content: "ok",
+		Metadata: modelMetadata{
+			Provider: providerAnthropic, API: "anthropic-messages", Model: "claude-test",
+			ResponseID: "msg-1", StopReason: "stop",
+			Usage: modelUsage{Input: 7, Output: 3, CacheRead: 2, CacheWrite: 1},
+		},
+	}}
+	runner, err := NewRunner(
+		discover.Application{Instructions: "test", Model: "claude-test"},
+		backend, "claude-test", NativeManifest(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var completed map[string]any
+	_, err = runner.Run(context.Background(), workflow.Turn{Message: "hello"}, func(eventType string, data any) error {
+		if eventType == "step.completed" {
+			completed = data.(map[string]any)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerMetadata := completed["providerMetadata"].(map[string]any)
+	usage := completed["usage"].(map[string]int)
+	if providerMetadata["provider"] != "anthropic" || providerMetadata["api"] != "anthropic-messages" ||
+		providerMetadata["model"] != "claude-test" || providerMetadata["responseId"] != "msg-1" {
+		t.Fatalf("provider metadata = %#v", providerMetadata)
+	}
+	if usage["inputTokens"] != 10 || usage["outputTokens"] != 3 ||
+		usage["cacheReadTokens"] != 2 || usage["cacheWriteTokens"] != 1 || usage["totalTokens"] != 13 {
+		t.Fatalf("usage = %#v", usage)
 	}
 }
 
@@ -197,9 +296,9 @@ func TestRejectsMalformedAndDuplicateToolCalls(t *testing.T) {
 			match: "non-object",
 		},
 		{
-			name:   "ambiguous response",
-			result: message{Role: "assistant", Content: "text", ToolCalls: []toolCall{{ID: "call", Name: "get_weather", Arguments: json.RawMessage(`{"city":"A"}`)}}},
-			match:  "either text or tool calls",
+			name:   "empty response",
+			result: message{Role: "assistant"},
+			match:  "text or tool calls",
 		},
 	}
 	for _, test := range tests {

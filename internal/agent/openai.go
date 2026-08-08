@@ -13,6 +13,7 @@ type openAIModel struct {
 	endpoint string
 	apiKey   string
 	headers  map[string]string
+	provider providerID
 }
 
 type chatMessage struct {
@@ -83,13 +84,23 @@ func (m *openAIModel) Complete(ctx context.Context, request modelRequest) (messa
 		return message{}, fmt.Errorf("model endpoint returned HTTP %d", status)
 	}
 	var response struct {
+		ID      string `json:"id"`
+		Model   string `json:"model"`
 		Choices []struct {
 			Message struct {
 				Role      string         `json:"role"`
 				Content   *string        `json:"content"`
 				ToolCalls []chatToolCall `json:"tool_calls"`
 			} `json:"message"`
+			FinishReason string `json:"finish_reason"`
 		} `json:"choices"`
+		Usage struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			PromptDetails    struct {
+				CachedTokens int `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
+		} `json:"usage"`
 	}
 	if err := json.Unmarshal(data, &response); err != nil {
 		return message{}, errors.New("model endpoint returned malformed JSON")
@@ -97,7 +108,17 @@ func (m *openAIModel) Complete(ctx context.Context, request modelRequest) (messa
 	if len(response.Choices) != 1 {
 		return message{}, errors.New("model endpoint must return exactly one choice")
 	}
-	result := message{Role: response.Choices[0].Message.Role}
+	metadata := metadataFor(m.provider, request.Model)
+	metadata.ResponseID = response.ID
+	metadata.Usage = modelUsage{
+		Input:     nonnegative(response.Usage.PromptTokens - response.Usage.PromptDetails.CachedTokens),
+		Output:    nonnegative(response.Usage.CompletionTokens),
+		CacheRead: nonnegative(response.Usage.PromptDetails.CachedTokens),
+	}
+	if response.Model != "" {
+		metadata.Model = response.Model
+	}
+	result := message{Role: response.Choices[0].Message.Role, Metadata: metadata}
 	if response.Choices[0].Message.Content != nil {
 		result.Content = *response.Choices[0].Message.Content
 	}
@@ -115,6 +136,13 @@ func (m *openAIModel) Complete(ctx context.Context, request modelRequest) (messa
 			Arguments: arguments,
 		})
 	}
+	stopReason, err := normalizeStopReason(
+		m.provider, response.Choices[0].FinishReason, len(result.ToolCalls) > 0,
+	)
+	if err != nil {
+		return message{}, err
+	}
+	result.Metadata.StopReason = stopReason
 	return result, nil
 }
 
