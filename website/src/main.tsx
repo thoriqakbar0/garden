@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 
+import { ApplicationErrorBoundary } from "./application-error-boundary";
 import { router } from "./router";
 import "./styles.css";
 
@@ -13,6 +14,8 @@ if (container === null) {
 
 createRoot(container).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <ApplicationErrorBoundary>
+      <RouterProvider router={router} />
+    </ApplicationErrorBoundary>
   </StrictMode>,
 );
