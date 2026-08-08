@@ -113,6 +113,8 @@
   stroke-width: 1.45;
 }
 
+.motion-control { display: none; }
+
 .motion-control[data-paused="true"] .motion-control-icon {
   width: 0;
   height: 0;
@@ -300,5 +302,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .motion-control { display: none; }
+  .motion-control { display: inline-flex; }
 }

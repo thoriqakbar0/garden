@@ -187,7 +187,7 @@ Botanical silhouettes deliberately break the otherwise regular geometry. Brand m
 ### Dithered Landscapes
 - **Style:** Locally hosted wheat and treetop footage is sampled frame by frame through one low-chroma forest-and-paper ordered-dither shader. The wheat field sits behind the hero; treetops replace the SVG illustration in the evidence section.
 - **Tuning:** DialKit exposes a shared `ditherScale` control from 1–12 in development so both landscapes can be tuned together.
-- **Lifecycle:** Each landscape uses `requestVideoFrameCallback`, pauses outside its section, owns WebGL cleanup, and falls back to a dithered poster frame when motion is reduced or playback is unavailable. Each video has its own pause control so visitors can stop only the motion they are viewing.
+- **Lifecycle:** Each landscape uses `requestVideoFrameCallback`, pauses outside its section, owns WebGL cleanup, and falls back to a dithered poster frame when motion is reduced or playback is unavailable. When `prefers-reduced-motion` is active, each video shows its own local control so visitors can opt that video into motion without changing the other landscape.
 - **Attribution:** The adapted CC BY 3.0 wheat footage, CC BY 4.0 treetop footage, and changes are documented in `THIRD_PARTY_NOTICES.md`.
 
 ### Event Stream

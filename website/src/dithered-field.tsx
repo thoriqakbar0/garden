@@ -139,7 +139,10 @@ type DitheredVideoProps = Readonly<{
 }>;
 
 function DitheredVideo({ className, ditherScale, label, poster, sources }: DitheredVideoProps) {
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const reducedMotionOverrideRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const ditherScaleRef = useRef(ditherScale);
@@ -216,6 +219,8 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
     gl.uniform1i(imageLocation, 0);
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const isReducedMotionActive = () =>
+      reducedMotion.matches && !reducedMotionOverrideRef.current;
     const fallbackImage = new Image();
     fallbackImage.src = poster;
 
@@ -299,7 +304,7 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
       !video.paused &&
       !pausedRef.current &&
       isVisible &&
-      !reducedMotion.matches &&
+      !isReducedMotionActive() &&
       !isDisposed;
 
     const cancelVideoFrame = () => {
@@ -320,7 +325,7 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
     };
 
     const startVideo = () => {
-      if (isDisposed || !isVisible || pausedRef.current || reducedMotion.matches) return;
+      if (isDisposed || !isVisible || pausedRef.current || isReducedMotionActive()) return;
 
       if (!video.paused) {
         if (currentSource !== video && configureCanvas(video)) render();
@@ -358,13 +363,16 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
         video.pause();
         return;
       }
-      if (reducedMotion.matches) showFallback();
+      if (isReducedMotionActive()) showFallback();
       else startVideo();
     };
 
     syncPlaybackRef.current = syncPlayback;
 
     const handleMotionChange = () => {
+      reducedMotionOverrideRef.current = false;
+      pausedRef.current = reducedMotion.matches;
+      setPaused(reducedMotion.matches);
       if (reducedMotion.matches) showFallback();
       else startVideo();
     };
@@ -374,7 +382,7 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
     const handleVideoReady = () => startVideo();
     const handleInteraction = () => startVideo();
     const handleFallbackReady = () => {
-      if (currentSource === null || reducedMotion.matches) showFallback();
+      if (currentSource === null || isReducedMotionActive()) showFallback();
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
@@ -424,6 +432,14 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
     };
   }, [poster]);
 
+  function toggleMotion(): void {
+    setPaused((isPaused) => {
+      const nextPaused = !isPaused;
+      reducedMotionOverrideRef.current = !nextPaused;
+      return nextPaused;
+    });
+  }
+
   return (
     <div className={className}>
       <canvas ref={canvasRef} aria-hidden="true" />
@@ -435,7 +451,7 @@ function DitheredVideo({ className, ditherScale, label, poster, sources }: Dithe
         type="button"
         aria-pressed={paused}
         data-paused={paused}
-        onClick={() => setPaused((isPaused) => !isPaused)}
+        onClick={toggleMotion}
       >
         <span className="motion-control-icon h-3 w-2.5 border-x-2 border-current" aria-hidden="true" />
         <span>{paused ? `Play ${label} motion` : `Pause ${label} motion`}</span>
