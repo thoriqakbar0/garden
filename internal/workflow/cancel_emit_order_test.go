@@ -56,13 +56,12 @@ func TestAcceptedCancelRejectsEmitAlreadyWaitingToAppend(t *testing.T) {
 
 	emitted := make(chan error, 1)
 	go func() {
-		emitted <- emit("message.completed", map[string]any{
-			"finishReason": "stop",
-			"message":      "must not persist",
-			"sequence":     0,
-			"stepIndex":    0,
-			"turnId":       started.TurnID,
-		})
+		emitted <- emit(MessageCompleted(
+			Step{Sequence: 0, StepIndex: 0, TurnID: started.TurnID},
+			"must not persist",
+			"stop",
+			CompletionMetadata{},
+		))
 	}()
 	waitForBlockedStack(t, "internal/workflow.(*Store).execute.func1", "sync.(*Mutex).Lock")
 

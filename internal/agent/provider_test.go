@@ -119,7 +119,7 @@ func TestProviderConfigurationSelectsNativeAdapters(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			runner, err := runnerFromConfig(
-				discover.Application{Instructions: "test", Model: test.appModel},
+				discover.NativeSpec{Instructions: "test", Model: test.appModel},
 				env(test.values), http.DefaultClient, time.Now(),
 			)
 			if err != nil {
@@ -155,7 +155,7 @@ func TestNativeProviderConfigurationRequiresCredentials(t *testing.T) {
 	for _, backend := range []string{"anthropic", "google"} {
 		t.Run(backend, func(t *testing.T) {
 			_, err := runnerFromConfig(
-				discover.Application{Instructions: "test", Model: backend + "/model"},
+				discover.NativeSpec{Instructions: "test", Model: backend + "/model"},
 				env(map[string]string{"GARDEN_MODEL_BACKEND": backend}),
 				http.DefaultClient, time.Now(),
 			)

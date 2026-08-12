@@ -129,7 +129,7 @@ func TestOpenAICompatibleMetadataAndUsageRemainDurable(t *testing.T) {
 	defer server.Close()
 
 	runner, err := runnerFromConfig(
-		discover.Application{Instructions: "test", Model: "router/model"},
+		discover.NativeSpec{Instructions: "test", Model: "router/model"},
 		env(map[string]string{
 			"GARDEN_MODEL_BACKEND":   "openai",
 			"GARDEN_OPENAI_BASE_URL": server.URL,
@@ -139,9 +139,9 @@ func TestOpenAICompatibleMetadataAndUsageRemainDurable(t *testing.T) {
 		t.Fatal(err)
 	}
 	var completed map[string]any
-	_, err = runner.Run(context.Background(), workflow.Turn{Message: "hello"}, func(eventType string, data any) error {
-		if eventType == "step.completed" {
-			completed = data.(map[string]any)
+	_, err = runner.Run(context.Background(), workflow.Turn{Message: "hello"}, func(event workflow.RunnerEvent) error {
+		if event.Type() == "step.completed" {
+			completed = runnerEventData(t, event)
 		}
 		return nil
 	})
@@ -149,25 +149,25 @@ func TestOpenAICompatibleMetadataAndUsageRemainDurable(t *testing.T) {
 		t.Fatal(err)
 	}
 	metadata := completed["providerMetadata"].(map[string]any)
-	usage := completed["usage"].(map[string]int)
+	usage := completed["usage"].(map[string]any)
 	if metadata["provider"] != "openai-compatible" || metadata["api"] != "openai-chat-completions" ||
 		metadata["model"] != "routed-model" || metadata["responseId"] != "router-response" {
 		t.Fatalf("provider metadata = %#v", metadata)
 	}
-	if usage["inputTokens"] != 5 || usage["outputTokens"] != 2 ||
-		usage["cacheReadTokens"] != 2 || usage["totalTokens"] != 7 {
+	if usage["inputTokens"] != float64(5) || usage["outputTokens"] != float64(2) ||
+		usage["cacheReadTokens"] != float64(2) || usage["totalTokens"] != float64(7) {
 		t.Fatalf("usage = %#v", usage)
 	}
 }
 
-func TestRunnerEmitsEveToolLifecycle(t *testing.T) {
+func TestRunnerIgnoresWhitespaceContentDuringToolLifecycle(t *testing.T) {
 	backend := &sequenceModel{results: []message{
-		{Role: "assistant", ToolCalls: []toolCall{{
+		{Role: "assistant", Content: " \n ", ToolCalls: []toolCall{{
 			ID: "weather-1", Name: "get_weather", Arguments: json.RawMessage(`{"city":"Jakarta"}`),
 		}}},
 		{Role: "assistant", Content: "Sunny."},
 	}}
-	runner, err := NewRunner(discover.Application{
+	runner, err := NewRunner(discover.NativeSpec{
 		Instructions: "test", Model: "model", Tools: []string{"get_weather"},
 	}, backend, "model", NativeManifest())
 	if err != nil {
@@ -176,8 +176,8 @@ func TestRunnerEmitsEveToolLifecycle(t *testing.T) {
 	var eventTypes []string
 	result, err := runner.Run(context.Background(), workflow.Turn{
 		SessionID: "ses_test", TurnID: "turn_test", Message: "Weather?", Sequence: 2,
-	}, func(eventType string, _ any) error {
-		eventTypes = append(eventTypes, eventType)
+	}, func(event workflow.RunnerEvent) error {
+		eventTypes = append(eventTypes, event.Type())
 		return nil
 	})
 	if err != nil {
@@ -205,16 +205,16 @@ func TestRunnerEmitsNormalizedProviderMetadata(t *testing.T) {
 		},
 	}}
 	runner, err := NewRunner(
-		discover.Application{Instructions: "test", Model: "claude-test"},
+		discover.NativeSpec{Instructions: "test", Model: "claude-test"},
 		backend, "claude-test", NativeManifest(),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var completed map[string]any
-	_, err = runner.Run(context.Background(), workflow.Turn{Message: "hello"}, func(eventType string, data any) error {
-		if eventType == "step.completed" {
-			completed = data.(map[string]any)
+	_, err = runner.Run(context.Background(), workflow.Turn{Message: "hello"}, func(event workflow.RunnerEvent) error {
+		if event.Type() == "step.completed" {
+			completed = runnerEventData(t, event)
 		}
 		return nil
 	})
@@ -222,13 +222,14 @@ func TestRunnerEmitsNormalizedProviderMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	providerMetadata := completed["providerMetadata"].(map[string]any)
-	usage := completed["usage"].(map[string]int)
+	usage := completed["usage"].(map[string]any)
 	if providerMetadata["provider"] != "anthropic" || providerMetadata["api"] != "anthropic-messages" ||
 		providerMetadata["model"] != "claude-test" || providerMetadata["responseId"] != "msg-1" {
 		t.Fatalf("provider metadata = %#v", providerMetadata)
 	}
-	if usage["inputTokens"] != 10 || usage["outputTokens"] != 3 ||
-		usage["cacheReadTokens"] != 2 || usage["cacheWriteTokens"] != 1 || usage["totalTokens"] != 13 {
+	if usage["inputTokens"] != float64(10) || usage["outputTokens"] != float64(3) ||
+		usage["cacheReadTokens"] != float64(2) || usage["cacheWriteTokens"] != float64(1) ||
+		usage["totalTokens"] != float64(13) {
 		t.Fatalf("usage = %#v", usage)
 	}
 }
@@ -252,14 +253,14 @@ func TestConversationExcludesInterruptedTurns(t *testing.T) {
 }
 
 func TestRejectsUnimplementedAndUndeclaredTools(t *testing.T) {
-	app := discover.Application{Instructions: "test", Model: "model", Tools: []string{"missing"}}
-	if _, err := NewResponder(app, staticModel{}, "model", NativeManifest()); err == nil ||
+	app := discover.NativeSpec{Instructions: "test", Model: "model", Tools: []string{"missing"}}
+	if _, err := NewRunner(app, staticModel{}, "model", NativeManifest()); err == nil ||
 		!strings.Contains(err.Error(), `declared tool "missing"`) {
 		t.Fatalf("unimplemented tool error = %v", err)
 	}
 
 	app.Tools = nil
-	responder, err := NewResponder(app, staticModel{result: message{
+	runner, err := NewRunner(app, staticModel{result: message{
 		Role: "assistant",
 		ToolCalls: []toolCall{{
 			ID: "call-1", Name: "get_weather", Arguments: json.RawMessage(`{"city":"secret-city"}`),
@@ -268,7 +269,7 @@ func TestRejectsUnimplementedAndUndeclaredTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = send(t, responder)
+	_, err = send(t, runner)
 	if err == nil || !strings.Contains(err.Error(), `undeclared tool "get_weather"`) {
 		t.Fatalf("undeclared tool error = %v", err)
 	}
@@ -303,12 +304,12 @@ func TestRejectsMalformedAndDuplicateToolCalls(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			app := discover.Application{Instructions: "test", Model: "model", Tools: []string{"get_weather"}}
-			responder, err := NewResponder(app, staticModel{result: test.result}, "model", NativeManifest())
+			app := discover.NativeSpec{Instructions: "test", Model: "model", Tools: []string{"get_weather"}}
+			runner, err := NewRunner(app, staticModel{result: test.result}, "model", NativeManifest())
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = send(t, responder)
+			_, err = send(t, runner)
 			if err == nil || !strings.Contains(err.Error(), test.match) {
 				t.Fatalf("error = %v, want %q", err, test.match)
 			}
@@ -337,8 +338,8 @@ func TestCloudflareGatewayTokenHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	app := discover.Application{Instructions: "test", Model: "model"}
-	responder, err := responderFromConfig(app, env(map[string]string{
+	app := discover.NativeSpec{Instructions: "test", Model: "model"}
+	runner, err := runnerFromConfig(app, env(map[string]string{
 		"GARDEN_MODEL_BACKEND":            "openai",
 		"GARDEN_OPENAI_BASE_URL":          server.URL,
 		"GARDEN_CLOUDFLARE_GATEWAY_TOKEN": gatewayToken,
@@ -346,7 +347,7 @@ func TestCloudflareGatewayTokenHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := send(t, responder)
+	result, err := send(t, runner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,27 +367,27 @@ func TestCancellationReachesModelAndTool(t *testing.T) {
 			<-r.Context().Done()
 		}))
 		defer server.Close()
-		app := discover.Application{Instructions: "test", Model: "model"}
-		responder, err := responderFromConfig(app, env(map[string]string{
+		app := discover.NativeSpec{Instructions: "test", Model: "model"}
+		runner, err := runnerFromConfig(app, env(map[string]string{
 			"GARDEN_MODEL_BACKEND": "openai", "GARDEN_OPENAI_BASE_URL": server.URL,
 		}), server.Client(), time.Now())
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertCancelled(t, responder, started)
+		assertCancelled(t, runner, started)
 	})
 
 	t.Run("tool", func(t *testing.T) {
 		started := make(chan struct{})
 		tool := &blockingTool{started: started}
-		app := discover.Application{Instructions: "test", Model: "model", Tools: []string{"blocking"}}
-		responder, err := NewResponder(app, staticModel{result: message{
+		app := discover.NativeSpec{Instructions: "test", Model: "model", Tools: []string{"blocking"}}
+		runner, err := NewRunner(app, staticModel{result: message{
 			Role: "assistant", ToolCalls: []toolCall{{ID: "call", Name: "blocking", Arguments: json.RawMessage(`{}`)}},
 		}}, "model", []Tool{tool})
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertCancelled(t, responder, started)
+		assertCancelled(t, runner, started)
 		if !tool.cancelled.Load() {
 			t.Fatal("tool did not observe cancellation")
 		}
@@ -399,15 +400,15 @@ func TestUpstreamErrorsDoNotLeakSecrets(t *testing.T) {
 		http.Error(w, secret, http.StatusUnauthorized)
 	}))
 	defer server.Close()
-	app := discover.Application{Instructions: "test", Model: "model"}
-	responder, err := responderFromConfig(app, env(map[string]string{
+	app := discover.NativeSpec{Instructions: "test", Model: "model"}
+	runner, err := runnerFromConfig(app, env(map[string]string{
 		"GARDEN_MODEL_BACKEND": "openai", "GARDEN_OPENAI_BASE_URL": server.URL,
 		"GARDEN_OPENAI_API_KEY": secret,
 	}), server.Client(), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = send(t, responder)
+	_, err = send(t, runner)
 	if err == nil || strings.Contains(err.Error(), secret) {
 		t.Fatalf("unsafe error = %v", err)
 	}
@@ -415,14 +416,14 @@ func TestUpstreamErrorsDoNotLeakSecrets(t *testing.T) {
 
 func TestToolErrorsAndPayloadLimitsAreSafe(t *testing.T) {
 	const secret = "tool-secret-never-expose"
-	app := discover.Application{Instructions: "test", Model: "model", Tools: []string{"failing"}}
-	responder, err := NewResponder(app, staticModel{result: message{
+	app := discover.NativeSpec{Instructions: "test", Model: "model", Tools: []string{"failing"}}
+	runner, err := NewRunner(app, staticModel{result: message{
 		Role: "assistant", ToolCalls: []toolCall{{ID: "call", Name: "failing", Arguments: json.RawMessage(`{}`)}},
 	}}, "model", []Tool{failingTool{secret: secret}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = send(t, responder)
+	_, err = send(t, runner)
 	if err == nil || strings.Contains(err.Error(), secret) {
 		t.Fatalf("unsafe tool error = %v", err)
 	}
@@ -433,22 +434,22 @@ func TestToolErrorsAndPayloadLimitsAreSafe(t *testing.T) {
 		fmt.Fprint(w, strings.Repeat("x", maxPayloadBytes+1))
 	}))
 	defer server.Close()
-	largeApp := discover.Application{Instructions: strings.Repeat("x", maxPayloadBytes), Model: "model"}
-	responder, err = responderFromConfig(largeApp, env(map[string]string{
+	largeApp := discover.NativeSpec{Instructions: strings.Repeat("x", maxPayloadBytes), Model: "model"}
+	runner, err = runnerFromConfig(largeApp, env(map[string]string{
 		"GARDEN_MODEL_BACKEND": "openai", "GARDEN_OPENAI_BASE_URL": server.URL,
 	}), server.Client(), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = send(t, responder)
+	_, err = send(t, runner)
 	if err == nil || !strings.Contains(err.Error(), "request exceeds 1 MiB") || requests.Load() != 0 {
 		t.Fatalf("oversized request error = %v, requests = %d", err, requests.Load())
 	}
 }
 
 func TestConfigurationIsExplicit(t *testing.T) {
-	app := discover.Application{Instructions: "test", Model: "model"}
-	_, err := responderFromConfig(app, env(nil), http.DefaultClient, time.Now())
+	app := discover.NativeSpec{Instructions: "test", Model: "model"}
+	_, err := runnerFromConfig(app, env(nil), http.DefaultClient, time.Now())
 	if err == nil || !strings.Contains(err.Error(), "GARDEN_MODEL_BACKEND") {
 		t.Fatalf("error = %v", err)
 	}
@@ -459,12 +460,12 @@ func TestCompletedHistoryIsSentInSessionOrder(t *testing.T) {
 		{Role: "assistant", Content: "first answer"},
 		{Role: "assistant", Content: "second answer"},
 	}}
-	app := discover.Application{Instructions: "instructions", Model: "model"}
-	responder, err := NewResponder(app, backend, "model", NativeManifest())
+	app := discover.NativeSpec{Instructions: "instructions", Model: "model"}
+	runner, err := NewRunner(app, backend, "model", NativeManifest())
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(t.TempDir(), responder)
+	store, err := workflow.OpenRunner(t.TempDir(), runner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,12 +493,12 @@ func TestCompletedHistoryIsSentInSessionOrder(t *testing.T) {
 
 func TestModelRoundsAreCapped(t *testing.T) {
 	backend := &repeatingToolModel{}
-	app := discover.Application{Instructions: "test", Model: "model", Tools: []string{"get_weather"}}
-	responder, err := NewResponder(app, backend, "model", NativeManifest())
+	app := discover.NativeSpec{Instructions: "test", Model: "model", Tools: []string{"get_weather"}}
+	runner, err := NewRunner(app, backend, "model", NativeManifest())
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = send(t, responder)
+	_, err = send(t, runner)
 	if err == nil || !strings.Contains(err.Error(), "maximum of 8 rounds") {
 		t.Fatalf("error = %v", err)
 	}
@@ -570,22 +571,35 @@ func (t *blockingTool) Execute(ctx context.Context, _ json.RawMessage) (json.Raw
 	return nil, ctx.Err()
 }
 
-func weatherApplication(t *testing.T) discover.Application {
+func weatherApplication(t *testing.T) discover.NativeSpec {
 	t.Helper()
 	app, err := discover.ApplicationAt(filepath.Join("..", "..", "examples", "eve-weather"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return app
+	return app.Native()
 }
 
 func env(values map[string]string) func(string) string {
 	return func(name string) string { return values[name] }
 }
 
-func send(t *testing.T, responder workflow.Responder) (workflow.TurnResult, error) {
+func runnerEventData(t *testing.T, event workflow.RunnerEvent) map[string]any {
 	t.Helper()
-	store, err := workflow.Open(t.TempDir(), responder)
+	payload, err := event.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(payload, &data); err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func send(t *testing.T, runner workflow.Runner) (workflow.TurnResult, error) {
+	t.Helper()
+	store, err := workflow.OpenRunner(t.TempDir(), runner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,9 +610,9 @@ func send(t *testing.T, responder workflow.Responder) (workflow.TurnResult, erro
 	return store.Send(context.Background(), session, "hello")
 }
 
-func assertCancelled(t *testing.T, responder workflow.Responder, started <-chan struct{}) {
+func assertCancelled(t *testing.T, runner workflow.Runner, started <-chan struct{}) {
 	t.Helper()
-	store, err := workflow.Open(t.TempDir(), responder)
+	store, err := workflow.OpenRunner(t.TempDir(), runner)
 	if err != nil {
 		t.Fatal(err)
 	}

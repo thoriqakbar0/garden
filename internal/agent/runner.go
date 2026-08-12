@@ -24,7 +24,7 @@ type Runner struct {
 }
 
 // NewRunner validates an application and constructs its native workflow runner.
-func NewRunner(app discover.Application, backend model, modelName string, manifest []Tool) (*Runner, error) {
+func NewRunner(app discover.NativeSpec, backend model, modelName string, manifest []Tool) (*Runner, error) {
 	if backend == nil {
 		return nil, errors.New("model backend is required")
 	}
@@ -65,16 +65,6 @@ func NewRunner(app discover.Application, backend model, modelName string, manife
 	}, nil
 }
 
-// NewResponder preserves the deterministic responder seam for tests and callers
-// that do not consume intermediate workflow events.
-func NewResponder(app discover.Application, backend model, modelName string, manifest []Tool) (workflow.Responder, error) {
-	runner, err := NewRunner(app, backend, modelName, manifest)
-	if err != nil {
-		return nil, err
-	}
-	return runner.Respond, nil
-}
-
 // Run executes one turn and emits each model and tool boundary before continuing.
 func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit) (string, error) {
 	if emit == nil {
@@ -88,10 +78,10 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 	seenCallIDs := make(map[string]struct{})
 
 	for stepIndex := 0; stepIndex < maxModelRounds; stepIndex++ {
-		step := map[string]any{
-			"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
+		step := workflow.Step{
+			Sequence: turn.Sequence, StepIndex: stepIndex, TurnID: turn.TurnID,
 		}
-		if err := emit("step.started", step); err != nil {
+		if err := emit(workflow.StepStarted(step)); err != nil {
 			return "", err
 		}
 
@@ -104,17 +94,11 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 		})
 		cancel()
 		if modelErr != nil {
-			_ = emit("step.failed", map[string]any{
-				"code": "MODEL_CALL_FAILED", "message": "The model call failed.",
-				"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-			})
+			_ = emit(workflow.StepFailed(step, "MODEL_CALL_FAILED", "The model call failed."))
 			return "", modelErr
 		}
 		if err := validateAssistant(result); err != nil {
-			_ = emit("step.failed", map[string]any{
-				"code": "MODEL_RESPONSE_INVALID", "message": "The model response was invalid.",
-				"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-			})
+			_ = emit(workflow.StepFailed(step, "MODEL_RESPONSE_INVALID", "The model response was invalid."))
 			return "", err
 		}
 		for _, call := range result.ToolCalls {
@@ -124,11 +108,8 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 			seenCallIDs[call.ID] = struct{}{}
 		}
 
-		if result.Content != "" {
-			if err := emit("message.appended", map[string]any{
-				"messageDelta": result.Content, "messageSoFar": result.Content,
-				"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-			}); err != nil {
+		if strings.TrimSpace(result.Content) != "" {
+			if err := emit(workflow.MessageAppended(step, result.Content, result.Content)); err != nil {
 				return "", err
 			}
 			finishReason := result.Metadata.StopReason
@@ -137,49 +118,32 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 			} else if finishReason == "" {
 				finishReason = "stop"
 			}
-			messageCompleted := map[string]any{
-				"finishReason": finishReason, "message": result.Content,
-				"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-			}
-			addModelMetadata(messageCompleted, result.Metadata)
-			if err := emit("message.completed", messageCompleted); err != nil {
+			metadata := workflowCompletionMetadata(result.Metadata)
+			if err := emit(workflow.MessageCompleted(step, result.Content, finishReason, metadata)); err != nil {
 				return "", err
 			}
 			if len(result.ToolCalls) == 0 {
-				stepCompleted := map[string]any{
-					"finishReason": finishReason, "sequence": turn.Sequence,
-					"stepIndex": stepIndex, "turnId": turn.TurnID,
-				}
-				addModelMetadata(stepCompleted, result.Metadata)
-				if err := emit("step.completed", stepCompleted); err != nil {
+				if err := emit(workflow.StepCompleted(step, finishReason, metadata)); err != nil {
 					return "", err
 				}
 				return result.Content, nil
 			}
 		}
 
-		actions := make([]actionRequest, 0, len(result.ToolCalls))
+		actions := make([]workflow.ActionRequest, 0, len(result.ToolCalls))
 		for _, call := range result.ToolCalls {
 			if _, exists := r.tools[call.Name]; !exists {
 				return "", fmt.Errorf("model requested undeclared tool %q", call.Name)
 			}
-			actions = append(actions, actionRequest{
+			actions = append(actions, workflow.ActionRequest{
 				CallID: call.ID, Input: call.Arguments, Kind: "tool-call",
 				ProviderData: call.ProviderData, ToolName: call.Name,
 			})
 		}
-		if err := emit("actions.requested", map[string]any{
-			"actions": actions, "sequence": turn.Sequence,
-			"stepIndex": stepIndex, "turnId": turn.TurnID,
-		}); err != nil {
+		if err := emit(workflow.ActionsRequested(step, actions)); err != nil {
 			return "", err
 		}
-		stepCompleted := map[string]any{
-			"finishReason": "tool-calls", "sequence": turn.Sequence,
-			"stepIndex": stepIndex, "turnId": turn.TurnID,
-		}
-		addModelMetadata(stepCompleted, result.Metadata)
-		if err := emit("step.completed", stepCompleted); err != nil {
+		if err := emit(workflow.StepCompleted(step, "tool-calls", workflowCompletionMetadata(result.Metadata))); err != nil {
 			return "", err
 		}
 		messages = append(messages, result)
@@ -190,7 +154,7 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 				return "", toolErr
 			}
 			status := "completed"
-			action := actionResult{
+			action := workflow.ActionResult{
 				CallID: call.ID, Kind: "tool-result", Output: output, ToolName: call.Name,
 			}
 			if toolErr != nil {
@@ -201,16 +165,15 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 			if len(action.Output) == 0 || len(action.Output) > maxPayloadBytes || !json.Valid(action.Output) {
 				return "", fmt.Errorf("native tool %q returned invalid JSON", call.Name)
 			}
-			data := map[string]any{
-				"result": action, "sequence": turn.Sequence, "status": status,
-				"stepIndex": stepIndex, "turnId": turn.TurnID,
-			}
+			var event workflow.RunnerEvent
 			if toolErr != nil {
-				data["error"] = map[string]string{
-					"code": "TOOL_EXECUTION_FAILED", "message": "Tool execution failed.",
-				}
+				event = workflow.ActionFailed(step, status, action, workflow.ActionFailure{
+					Code: "TOOL_EXECUTION_FAILED", Message: "Tool execution failed.",
+				})
+			} else {
+				event = workflow.ActionCompleted(step, action)
 			}
-			if err := emit("action.result", data); err != nil {
+			if err := emit(event); err != nil {
 				return "", err
 			}
 			messages = append(messages, message{
@@ -221,13 +184,6 @@ func (r *Runner) Run(ctx context.Context, turn workflow.Turn, emit workflow.Emit
 	return "", fmt.Errorf("model exceeded the maximum of %d rounds", maxModelRounds)
 }
 
-// Respond runs the model loop without exposing its intermediate event stream.
-func (r *Runner) Respond(ctx context.Context, current string, events []workflow.Event) (string, error) {
-	return r.Run(ctx, workflow.Turn{Message: current, History: events}, func(string, any) error {
-		return nil
-	})
-}
-
 func (r *Runner) executeTool(ctx context.Context, tool Tool, arguments json.RawMessage) (json.RawMessage, error) {
 	stepContext, cancel := context.WithTimeout(ctx, modelStepTimeout)
 	defer cancel()
@@ -236,22 +192,6 @@ func (r *Runner) executeTool(ctx context.Context, tool Tool, arguments json.RawM
 		return nil, stepContext.Err()
 	}
 	return output, err
-}
-
-type actionRequest struct {
-	CallID       string          `json:"callId"`
-	Input        json.RawMessage `json:"input"`
-	Kind         string          `json:"kind"`
-	ProviderData json.RawMessage `json:"providerData,omitempty"`
-	ToolName     string          `json:"toolName"`
-}
-
-type actionResult struct {
-	CallID   string          `json:"callId"`
-	IsError  bool            `json:"isError,omitempty"`
-	Kind     string          `json:"kind"`
-	Output   json.RawMessage `json:"output"`
-	ToolName string          `json:"toolName"`
 }
 
 func conversation(events []workflow.Event) ([]message, error) {
@@ -279,7 +219,7 @@ func conversation(events []workflow.Event) ([]message, error) {
 			}
 		case "actions.requested":
 			var data struct {
-				Actions []actionRequest `json:"actions"`
+				Actions []workflow.ActionRequest `json:"actions"`
 			}
 			if err := json.Unmarshal(event.Data, &data); err != nil || len(data.Actions) == 0 {
 				return nil, fmt.Errorf("parse actions.requested event %d", event.Index)
@@ -302,7 +242,7 @@ func conversation(events []workflow.Event) ([]message, error) {
 			}
 		case "action.result":
 			var data struct {
-				Result actionResult `json:"result"`
+				Result workflow.ActionResult `json:"result"`
 			}
 			if err := json.Unmarshal(event.Data, &data); err != nil ||
 				data.Result.CallID == "" || !json.Valid(data.Result.Output) {

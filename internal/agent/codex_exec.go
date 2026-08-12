@@ -56,7 +56,7 @@ type codexPromptMessage struct {
 }
 
 func codexExecRunnerFromConfig(
-	app discover.Application,
+	app discover.NativeSpec,
 	getenv func(string) string,
 	lookPath func(string) (string, error),
 ) (*codexExecRunner, error) {
@@ -68,7 +68,7 @@ func codexExecRunnerFromConfig(
 }
 
 func codexExecRunnerFromCommand(
-	app discover.Application,
+	app discover.NativeSpec,
 	getenv func(string) string,
 	command string,
 ) (*codexExecRunner, error) {
@@ -202,9 +202,8 @@ func consumeCodexEvents(reader io.Reader, turn workflow.Turn, emit workflow.Emit
 		if stepOpen {
 			return nil
 		}
-		if err := emit("step.started", map[string]any{
-			"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-		}); err != nil {
+		step := workflow.Step{Sequence: turn.Sequence, StepIndex: stepIndex, TurnID: turn.TurnID}
+		if err := emit(workflow.StepStarted(step)); err != nil {
 			return err
 		}
 		stepOpen = true
@@ -220,18 +219,13 @@ func consumeCodexEvents(reader io.Reader, turn workflow.Turn, emit workflow.Emit
 		if err := startStep(); err != nil {
 			return err
 		}
-		if err := emit("actions.requested", map[string]any{
-			"actions": []actionRequest{{
-				CallID: item.ID, Input: json.RawMessage(`{}`), Kind: "tool-call", ToolName: "terminal",
-			}},
-			"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-		}); err != nil {
+		step := workflow.Step{Sequence: turn.Sequence, StepIndex: stepIndex, TurnID: turn.TurnID}
+		if err := emit(workflow.ActionsRequested(step, []workflow.ActionRequest{{
+			CallID: item.ID, Input: json.RawMessage(`{}`), Kind: "tool-call", ToolName: "terminal",
+		}})); err != nil {
 			return err
 		}
-		if err := emit("step.completed", map[string]any{
-			"finishReason": "tool-calls", "sequence": turn.Sequence,
-			"stepIndex": stepIndex, "turnId": turn.TurnID,
-		}); err != nil {
+		if err := emit(workflow.StepCompleted(step, "tool-calls", workflow.CompletionMetadata{})); err != nil {
 			return err
 		}
 		steps[item.ID] = stepIndex
@@ -273,18 +267,25 @@ func consumeCodexEvents(reader io.Reader, turn workflow.Turn, emit workflow.Emit
 				if err != nil {
 					return "", errors.New("encode Codex command result")
 				}
-				result := actionResult{
+				result := workflow.ActionResult{
 					CallID: event.Item.ID, Kind: "tool-result",
 					Output: encoded, ToolName: "terminal",
 				}
 				if status != "completed" {
 					result.IsError = true
 				}
-				if err := emit("action.result", map[string]any{
-					"result":   result,
-					"sequence": turn.Sequence, "status": status,
-					"stepIndex": steps[event.Item.ID], "turnId": turn.TurnID,
-				}); err != nil {
+				step := workflow.Step{
+					Sequence: turn.Sequence, StepIndex: steps[event.Item.ID], TurnID: turn.TurnID,
+				}
+				var emitted workflow.RunnerEvent
+				if result.IsError {
+					emitted = workflow.ActionFailed(step, status, result, workflow.ActionFailure{
+						Code: "COMMAND_EXECUTION_FAILED", Message: "Command execution failed.",
+					})
+				} else {
+					emitted = workflow.ActionCompleted(step, result)
+				}
+				if err := emit(emitted); err != nil {
 					return "", err
 				}
 				completedActions[event.Item.ID] = struct{}{}
@@ -311,22 +312,14 @@ func consumeCodexEvents(reader io.Reader, turn workflow.Turn, emit workflow.Emit
 	if err := startStep(); err != nil {
 		return "", err
 	}
-	if err := emit("message.appended", map[string]any{
-		"messageDelta": finalMessage, "messageSoFar": finalMessage,
-		"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-	}); err != nil {
+	step := workflow.Step{Sequence: turn.Sequence, StepIndex: stepIndex, TurnID: turn.TurnID}
+	if err := emit(workflow.MessageAppended(step, finalMessage, finalMessage)); err != nil {
 		return "", err
 	}
-	if err := emit("message.completed", map[string]any{
-		"finishReason": "stop", "message": finalMessage,
-		"sequence": turn.Sequence, "stepIndex": stepIndex, "turnId": turn.TurnID,
-	}); err != nil {
+	if err := emit(workflow.MessageCompleted(step, finalMessage, "stop", workflow.CompletionMetadata{})); err != nil {
 		return "", err
 	}
-	if err := emit("step.completed", map[string]any{
-		"finishReason": "stop", "sequence": turn.Sequence,
-		"stepIndex": stepIndex, "turnId": turn.TurnID,
-	}); err != nil {
+	if err := emit(workflow.StepCompleted(step, "stop", workflow.CompletionMetadata{})); err != nil {
 		return "", err
 	}
 	return finalMessage, nil

@@ -17,8 +17,48 @@ var (
 	modelPattern = regexp.MustCompile(`(?:\?\?\s*)?["']([a-z0-9_-]+/[a-zA-Z0-9._:-]+)["']`)
 )
 
-// Application is the discovered, serializable description of one authored agent.
+// Application is one validated, discovered agent description.
 type Application struct {
+	root         string
+	instructions string
+	model        string
+	tools        []string
+	skills       []string
+	channels     []string
+	connections  []string
+	subagents    []string
+	schedules    []Schedule
+	evals        []string
+}
+
+// NativeSpec is the narrow input required by native agent execution.
+type NativeSpec struct {
+	Root         string
+	Instructions string
+	Model        string
+	Tools        []string
+}
+
+// PublishedSchedule is the safe schedule information exposed by the HTTP runtime.
+type PublishedSchedule struct {
+	ID   string
+	Cron string
+}
+
+// Manifest is the public agent inventory exposed by the HTTP runtime.
+type Manifest struct {
+	Model       string
+	Tools       []string
+	Skills      []string
+	Channels    []string
+	Connections []string
+	Subagents   []string
+	Schedules   []PublishedSchedule
+	Evals       []string
+}
+
+// Info is the complete serializable projection returned by `garden info`.
+type Info struct {
 	Root         string     `json:"root"`
 	Instructions string     `json:"instructions"`
 	Model        string     `json:"model,omitempty"`
@@ -38,6 +78,41 @@ type Schedule struct {
 	Path string `json:"path"`
 }
 
+// Native returns the validated input required by native agent execution.
+func (app Application) Native() NativeSpec {
+	return NativeSpec{
+		Root: app.root, Instructions: app.instructions, Model: app.model,
+		Tools: append([]string(nil), app.tools...),
+	}
+}
+
+// Manifest returns the safe inventory exposed by the HTTP runtime.
+func (app Application) Manifest() Manifest {
+	schedules := make([]PublishedSchedule, len(app.schedules))
+	for index, schedule := range app.schedules {
+		schedules[index] = PublishedSchedule{ID: schedule.ID, Cron: schedule.Cron}
+	}
+	return Manifest{
+		Model: app.model, Tools: append([]string(nil), app.tools...),
+		Skills: append([]string(nil), app.skills...), Channels: append([]string(nil), app.channels...),
+		Connections: append([]string(nil), app.connections...),
+		Subagents:   append([]string(nil), app.subagents...), Schedules: schedules,
+		Evals: append([]string(nil), app.evals...),
+	}
+}
+
+// Info returns the complete detached projection used by the CLI.
+func (app Application) Info() Info {
+	return Info{
+		Root: app.root, Instructions: app.instructions, Model: app.model,
+		Tools: append([]string(nil), app.tools...), Skills: append([]string(nil), app.skills...),
+		Channels:    append([]string(nil), app.channels...),
+		Connections: append([]string(nil), app.connections...),
+		Subagents:   append([]string(nil), app.subagents...),
+		Schedules:   append([]Schedule(nil), app.schedules...), Evals: append([]string(nil), app.evals...),
+	}
+}
+
 // ApplicationAt discovers an eve-compatible agent rooted at projectRoot.
 func ApplicationAt(projectRoot string) (Application, error) {
 	root, err := filepath.Abs(projectRoot)
@@ -54,32 +129,32 @@ func ApplicationAt(projectRoot string) (Application, error) {
 		return Application{}, fmt.Errorf("read instructions: %w", err)
 	}
 
-	app := Application{Root: root, Instructions: string(instructions)}
-	app.Tools, err = namedFiles(filepath.Join(agentRoot, "tools"), sourceFile)
+	app := Application{root: root, instructions: string(instructions)}
+	app.tools, err = namedFiles(filepath.Join(agentRoot, "tools"), sourceFile)
 	if err != nil {
 		return Application{}, err
 	}
-	app.Skills, err = namedSkills(filepath.Join(agentRoot, "skills"))
+	app.skills, err = namedSkills(filepath.Join(agentRoot, "skills"))
 	if err != nil {
 		return Application{}, err
 	}
-	app.Channels, err = namedFiles(filepath.Join(agentRoot, "channels"), sourceFile)
+	app.channels, err = namedFiles(filepath.Join(agentRoot, "channels"), sourceFile)
 	if err != nil {
 		return Application{}, err
 	}
-	app.Connections, err = namedFiles(filepath.Join(agentRoot, "connections"), sourceFile)
+	app.connections, err = namedFiles(filepath.Join(agentRoot, "connections"), sourceFile)
 	if err != nil {
 		return Application{}, err
 	}
-	app.Subagents, err = namedDirectories(filepath.Join(agentRoot, "subagents"))
+	app.subagents, err = namedDirectories(filepath.Join(agentRoot, "subagents"))
 	if err != nil {
 		return Application{}, err
 	}
-	app.Schedules, err = schedules(filepath.Join(agentRoot, "schedules"), root)
+	app.schedules, err = schedules(filepath.Join(agentRoot, "schedules"), root)
 	if err != nil {
 		return Application{}, err
 	}
-	app.Evals, err = namedFiles(filepath.Join(root, "evals"), func(path string) bool {
+	app.evals, err = namedFiles(filepath.Join(root, "evals"), func(path string) bool {
 		return strings.HasSuffix(path, ".eval.ts") || strings.HasSuffix(path, ".eval.js")
 	})
 	if err != nil {
@@ -88,7 +163,7 @@ func ApplicationAt(projectRoot string) (Application, error) {
 	agentSource, readErr := os.ReadFile(filepath.Join(agentRoot, "agent.ts"))
 	if readErr == nil {
 		if match := modelPattern.FindSubmatch(agentSource); len(match) == 2 {
-			app.Model = string(match[1])
+			app.model = string(match[1])
 		}
 	} else if !errors.Is(readErr, fs.ErrNotExist) {
 		return Application{}, fmt.Errorf("read agent definition: %w", readErr)

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/thoriqakbar0/garden/internal/workflow"
+	"github.com/thoriqakbar0/garden/internal/workflowtest"
 )
 
 func TestOpenRejectsRecoveryInvariantViolations(t *testing.T) {
@@ -184,6 +185,38 @@ func TestOpenRejectsRecoveryInvariantViolations(t *testing.T) {
 			},
 		},
 		{
+			name: "step completion before start",
+			events: []workflow.Event{
+				sessionStarted(0),
+				turnStarted,
+				{
+					Index: 2, Type: "step.completed",
+					Meta: workflow.EventMeta{At: "2026-01-01T00:00:02Z"}, SessionID: sessionID,
+					TurnID: "turn_0",
+					Data:   json.RawMessage(`{"finishReason":"stop","sequence":0,"stepIndex":0,"turnId":"turn_0"}`),
+				},
+			},
+		},
+		{
+			name: "action result without request",
+			events: []workflow.Event{
+				sessionStarted(0),
+				turnStarted,
+				{
+					Index: 2, Type: "step.started",
+					Meta: workflow.EventMeta{At: "2026-01-01T00:00:02Z"}, SessionID: sessionID,
+					TurnID: "turn_0",
+					Data:   json.RawMessage(`{"sequence":0,"stepIndex":0,"turnId":"turn_0"}`),
+				},
+				{
+					Index: 3, Type: "action.result",
+					Meta: workflow.EventMeta{At: "2026-01-01T00:00:03Z"}, SessionID: sessionID,
+					TurnID: "turn_0",
+					Data:   json.RawMessage(`{"result":{"callId":"call-1","kind":"tool-result","output":{},"toolName":"test"},"sequence":0,"status":"completed","stepIndex":0,"turnId":"turn_0"}`),
+				},
+			},
+		},
+		{
 			name: "reused turn id",
 			events: []workflow.Event{
 				sessionStarted(0),
@@ -216,7 +249,7 @@ func TestOpenRejectsRecoveryInvariantViolations(t *testing.T) {
 			root := t.TempDir()
 			writeRecoveryInvariantLog(t, root, sessionID, test.events)
 
-			store, err := workflow.Open(root, workflow.EchoResponder)
+			store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 			if store != nil {
 				_ = store.Close()
 				t.Fatalf("Open returned a store for corrupt recovery history: %v", err)

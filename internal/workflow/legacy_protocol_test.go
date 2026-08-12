@@ -14,6 +14,7 @@ import (
 	"github.com/thoriqakbar0/garden/internal/protocol"
 	"github.com/thoriqakbar0/garden/internal/server"
 	"github.com/thoriqakbar0/garden/internal/workflow"
+	"github.com/thoriqakbar0/garden/internal/workflowtest"
 )
 
 func TestMigratedLegacyMessageHasCanonicalPublicLifecycle(t *testing.T) {
@@ -33,12 +34,12 @@ func TestMigratedLegacyMessageHasCanonicalPublicLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	target := httptest.NewServer(server.Handler(discover.Application{}, store))
+	target := httptest.NewServer(server.Handler(discover.Manifest{}, store))
 	t.Cleanup(target.Close)
 
 	client := contracttest.NewClient(target.URL)

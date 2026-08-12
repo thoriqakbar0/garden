@@ -55,35 +55,41 @@ Verify the installation:
 Run "garden <command> --help" to show command options.`
 
 func main() {
-	if err := run(os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "garden:", err)
+	streams := commandStreams{stdout: os.Stdout, stderr: os.Stderr}
+	if err := run(os.Args[1:], streams); err != nil {
+		fmt.Fprintln(streams.stderr, "garden:", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string, output io.Writer) error {
+type commandStreams struct {
+	stdout io.Writer
+	stderr io.Writer
+}
+
+func run(args []string, streams commandStreams) error {
 	if len(args) == 0 {
 		return usageError("a command is required")
 	}
 	var commandErr error
 	switch args[0] {
 	case "init":
-		commandErr = initProject(args[1:])
+		commandErr = initProject(args[1:], streams)
 	case "info":
-		commandErr = info(args[1:])
+		commandErr = info(args[1:], streams)
 	case "run":
-		commandErr = runOnce(args[1:])
+		commandErr = runOnce(args[1:], streams)
 	case "serve", "dev", "start":
-		commandErr = serve(args[1:])
+		commandErr = serve(args[1:], streams)
 	case "eval":
-		commandErr = eval(args[1:])
+		commandErr = eval(args[1:], streams)
 	case "help", "--help", "-h":
-		if _, err := fmt.Fprintln(output, helpText); err != nil {
+		if _, err := fmt.Fprintln(streams.stdout, helpText); err != nil {
 			return fmt.Errorf("write help: %w", err)
 		}
 		return nil
 	case "version", "--version", "-v":
-		if _, err := fmt.Fprintln(output, version); err != nil {
+		if _, err := fmt.Fprintln(streams.stdout, version); err != nil {
 			return fmt.Errorf("write version: %w", err)
 		}
 		return nil
@@ -100,8 +106,9 @@ func usageError(message string) error {
 	return fmt.Errorf("%s\n\n%s", message, helpText)
 }
 
-func initProject(args []string) error {
+func initProject(args []string, streams commandStreams) error {
 	flags := flag.NewFlagSet("garden init", flag.ContinueOnError)
+	flags.SetOutput(streams.stderr)
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -129,26 +136,35 @@ func initProject(args []string) error {
 			return err
 		}
 	}
-	fmt.Println("initialized", root)
+	_, err := fmt.Fprintln(streams.stdout, "initialized", root)
+	if err != nil {
+		return fmt.Errorf("write init result: %w", err)
+	}
 	return nil
 }
 
-func info(args []string) error {
-	root, _, err := commonFlags("info", args, false)
+func info(args []string, streams commandStreams) error {
+	flags := flag.NewFlagSet("garden info", flag.ContinueOnError)
+	flags.SetOutput(streams.stderr)
+	root := flags.String("root", ".", "project root")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return errors.New("info does not accept positional arguments")
+	}
+	app, err := discover.ApplicationAt(*root)
 	if err != nil {
 		return err
 	}
-	app, err := discover.ApplicationAt(root)
-	if err != nil {
-		return err
-	}
-	encoder := json.NewEncoder(os.Stdout)
+	encoder := json.NewEncoder(streams.stdout)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(app)
+	return encoder.Encode(app.Info())
 }
 
-func runOnce(args []string) error {
+func runOnce(args []string, streams commandStreams) error {
 	flags := flag.NewFlagSet("garden run", flag.ContinueOnError)
+	flags.SetOutput(streams.stderr)
 	root := flags.String("root", ".", "project root")
 	message := flags.String("message", "", "message to send")
 	sessionID := flags.String("session", "", "existing session id")
@@ -162,7 +178,7 @@ func runOnce(args []string) error {
 	if err != nil {
 		return err
 	}
-	runner, err := agent.RunnerFromEnvironment(app)
+	runner, err := agent.RunnerFromEnvironment(app.Native())
 	if err != nil {
 		return err
 	}
@@ -182,22 +198,22 @@ func runOnce(args []string) error {
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return json.NewEncoder(streams.stdout).Encode(result)
 }
 
-func serve(args []string) (returnErr error) {
-	options, err := parseServeOptions(args)
+func serve(args []string, streams commandStreams) (returnErr error) {
+	options, err := parseServeOptions(args, streams.stderr)
 	if err != nil {
 		return err
 	}
 	if options.runtime == "eve" {
-		return serveOfficialEve(options)
+		return serveOfficialEve(options, streams)
 	}
 	app, err := discover.ApplicationAt(options.root)
 	if err != nil {
 		return err
 	}
-	runner, err := agent.RunnerFromEnvironment(app)
+	runner, err := agent.RunnerFromEnvironment(app.Native())
 	if err != nil {
 		return err
 	}
@@ -206,11 +222,11 @@ func serve(args []string) (returnErr error) {
 		return err
 	}
 	defer func() { returnErr = errors.Join(returnErr, store.Close()) }()
-	handler, err := authenticatedHandler(options.addr, os.Getenv("GARDEN_AUTH_TOKEN"), server.Handler(app, store))
+	handler, err := authenticatedHandler(options.addr, os.Getenv("GARDEN_AUTH_TOKEN"), server.Handler(app.Manifest(), store))
 	if err != nil {
 		return err
 	}
-	log.Printf("garden listening on %s", options.addr)
+	log.New(streams.stderr, "", log.LstdFlags).Printf("garden listening on %s", options.addr)
 	httpServer := &http.Server{
 		Addr:              options.addr,
 		Handler:           handler,
@@ -244,8 +260,9 @@ type serveOptions struct {
 	runtime string
 }
 
-func parseServeOptions(args []string) (serveOptions, error) {
+func parseServeOptions(args []string, stderr io.Writer) (serveOptions, error) {
 	flags := flag.NewFlagSet("garden serve", flag.ContinueOnError)
+	flags.SetOutput(stderr)
 	root := flags.String("root", ".", "project root")
 	addr := flags.String("addr", "127.0.0.1:3000", "listen address")
 	runtimeName := flags.String("runtime", "native", "runtime implementation: native or eve")
@@ -262,22 +279,23 @@ func parseServeOptions(args []string) (serveOptions, error) {
 	return serveOptions{addr: *addr, root: *root, runtime: runtimeValue}, nil
 }
 
-func serveOfficialEve(options serveOptions) error {
+func serveOfficialEve(options serveOptions, streams commandStreams) error {
 	host, err := evehost.Open(options.root, options.addr)
 	if err != nil {
 		return err
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	err = host.Run(ctx, os.Stdout, os.Stderr)
+	err = host.Run(ctx, streams.stdout, streams.stderr)
 	if errors.Is(err, context.Canceled) && ctx.Err() != nil {
 		return nil
 	}
 	return err
 }
 
-func eval(args []string) error {
+func eval(args []string, streams commandStreams) error {
 	flags := flag.NewFlagSet("garden eval", flag.ContinueOnError)
+	flags.SetOutput(streams.stderr)
 	root := flags.String("root", ".", "project root")
 	list := flags.Bool("list", false, "list discovered evals")
 	if err := flags.Parse(args); err != nil {
@@ -290,21 +308,11 @@ func eval(args []string) error {
 	if !*list {
 		return errors.New("TypeScript eval execution is not ported; use --list or write native Go compatibility tests")
 	}
-	fmt.Println(strings.Join(app.Evals, "\n"))
+	_, err = fmt.Fprintln(streams.stdout, strings.Join(app.Info().Evals, "\n"))
+	if err != nil {
+		return fmt.Errorf("write eval list: %w", err)
+	}
 	return nil
-}
-
-func commonFlags(name string, args []string, withAddr bool) (string, string, error) {
-	flags := flag.NewFlagSet("garden "+name, flag.ContinueOnError)
-	root := flags.String("root", ".", "project root")
-	addr := flags.String("addr", "127.0.0.1:3000", "listen address")
-	if !withAddr {
-		flags.SetOutput(os.Stderr)
-	}
-	if err := flags.Parse(args); err != nil {
-		return "", "", err
-	}
-	return *root, *addr, nil
 }
 
 func authenticatedHandler(addr, configuredToken string, next http.Handler) (http.Handler, error) {

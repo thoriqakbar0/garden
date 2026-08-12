@@ -17,16 +17,17 @@ func TestOfficialEveShapeIsRunnableByGarden(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if app.Model != "anthropic/claude-sonnet-5" {
-		t.Fatalf("model = %q", app.Model)
+	info := app.Info()
+	if info.Model != "anthropic/claude-sonnet-5" {
+		t.Fatalf("model = %q", info.Model)
 	}
-	if len(app.Tools) != 1 || app.Tools[0] != "get_weather" {
-		t.Fatalf("tools = %v", app.Tools)
+	if len(info.Tools) != 1 || info.Tools[0] != "get_weather" {
+		t.Fatalf("tools = %v", info.Tools)
 	}
-	if len(app.Skills) != 1 || app.Skills[0] != "get-weather" {
-		t.Fatalf("skills = %v", app.Skills)
+	if len(info.Skills) != 1 || info.Skills[0] != "get-weather" {
+		t.Fatalf("skills = %v", info.Skills)
 	}
-	if app.Root != filepath.Clean(root) {
-		t.Fatalf("root = %q, want %q", app.Root, filepath.Clean(root))
+	if info.Root != filepath.Clean(root) {
+		t.Fatalf("root = %q, want %q", info.Root, filepath.Clean(root))
 	}
 }

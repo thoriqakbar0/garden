@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,10 +16,11 @@ import (
 	"github.com/thoriqakbar0/garden/internal/protocol"
 	"github.com/thoriqakbar0/garden/internal/server"
 	"github.com/thoriqakbar0/garden/internal/workflow"
+	"github.com/thoriqakbar0/garden/internal/workflowtest"
 )
 
 func TestGardenPassesSharedEveConversationContract(t *testing.T) {
-	target := serve(t, workflow.EchoResponder)
+	target := serveRunner(t, workflowtest.EchoRunner())
 	contracttest.RunConversationContract(t, target.URL)
 }
 
@@ -31,41 +34,35 @@ func TestGardenPassesSharedEveCancellationContract(t *testing.T) {
 
 func TestToolInternalsStayOffPublicStreamAndCursor(t *testing.T) {
 	runner := workflow.RunnerFunc(func(_ context.Context, turn workflow.Turn, emit workflow.Emit) (string, error) {
-		step := func(index int) map[string]any {
-			return map[string]any{"sequence": turn.Sequence, "stepIndex": index, "turnId": turn.TurnID}
+		step := func(index int) workflow.Step {
+			return workflow.Step{Sequence: turn.Sequence, StepIndex: index, TurnID: turn.TurnID}
 		}
-		if err := emit("step.started", step(0)); err != nil {
+		if err := emit(workflow.StepStarted(step(0))); err != nil {
 			return "", err
 		}
-		if err := emit("actions.requested", map[string]any{"private": "tool arguments"}); err != nil {
+		if err := emit(workflow.ActionsRequested(step(0), []workflow.ActionRequest{{
+			CallID: "call-1", Input: json.RawMessage(`{}`), Kind: "tool-call", ToolName: "test",
+		}})); err != nil {
 			return "", err
 		}
-		first := step(0)
-		first["finishReason"] = "tool-calls"
-		if err := emit("step.completed", first); err != nil {
+		if err := emit(workflow.StepCompleted(step(0), "tool-calls", workflow.CompletionMetadata{})); err != nil {
 			return "", err
 		}
-		if err := emit("action.result", map[string]any{"private": "tool output"}); err != nil {
+		if err := emit(workflow.ActionCompleted(step(0), workflow.ActionResult{
+			CallID: "call-1", Kind: "tool-result", Output: json.RawMessage(`{}`), ToolName: "test",
+		})); err != nil {
 			return "", err
 		}
-		if err := emit("step.started", step(1)); err != nil {
+		if err := emit(workflow.StepStarted(step(1))); err != nil {
 			return "", err
 		}
-		if err := emit("message.appended", map[string]any{
-			"messageDelta": "done", "messageSoFar": "done",
-			"sequence": turn.Sequence, "stepIndex": 1, "turnId": turn.TurnID,
-		}); err != nil {
+		if err := emit(workflow.MessageAppended(step(1), "done", "done")); err != nil {
 			return "", err
 		}
-		if err := emit("message.completed", map[string]any{
-			"finishReason": "stop", "message": "done",
-			"sequence": turn.Sequence, "stepIndex": 1, "turnId": turn.TurnID,
-		}); err != nil {
+		if err := emit(workflow.MessageCompleted(step(1), "done", "stop", workflow.CompletionMetadata{})); err != nil {
 			return "", err
 		}
-		last := step(1)
-		last["finishReason"] = "stop"
-		if err := emit("step.completed", last); err != nil {
+		if err := emit(workflow.StepCompleted(step(1), "stop", workflow.CompletionMetadata{})); err != nil {
 			return "", err
 		}
 		return "done", nil
@@ -97,26 +94,19 @@ func TestStreamDisconnectDoesNotCancelActiveTurn(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 	runner := workflow.RunnerFunc(func(_ context.Context, turn workflow.Turn, emit workflow.Emit) (string, error) {
-		step := map[string]any{"sequence": turn.Sequence, "stepIndex": 0, "turnId": turn.TurnID}
-		if err := emit("step.started", step); err != nil {
+		step := workflow.Step{Sequence: turn.Sequence, StepIndex: 0, TurnID: turn.TurnID}
+		if err := emit(workflow.StepStarted(step)); err != nil {
 			return "", err
 		}
 		close(started)
 		<-release
-		if err := emit("message.appended", map[string]any{
-			"messageDelta": "done", "messageSoFar": "done",
-			"sequence": turn.Sequence, "stepIndex": 0, "turnId": turn.TurnID,
-		}); err != nil {
+		if err := emit(workflow.MessageAppended(step, "done", "done")); err != nil {
 			return "", err
 		}
-		if err := emit("message.completed", map[string]any{
-			"finishReason": "stop", "message": "done",
-			"sequence": turn.Sequence, "stepIndex": 0, "turnId": turn.TurnID,
-		}); err != nil {
+		if err := emit(workflow.MessageCompleted(step, "done", "stop", workflow.CompletionMetadata{})); err != nil {
 			return "", err
 		}
-		step["finishReason"] = "stop"
-		if err := emit("step.completed", step); err != nil {
+		if err := emit(workflow.StepCompleted(step, "stop", workflow.CompletionMetadata{})); err != nil {
 			return "", err
 		}
 		return "done", nil
@@ -158,7 +148,7 @@ func TestStreamDisconnectDoesNotCancelActiveTurn(t *testing.T) {
 }
 
 func TestCancelValidationMatchesEve(t *testing.T) {
-	target := serve(t, workflow.EchoResponder)
+	target := serveRunner(t, workflowtest.EchoRunner())
 	for _, testCase := range []struct {
 		name string
 		body string
@@ -195,11 +185,11 @@ func TestCancelValidationMatchesEve(t *testing.T) {
 }
 
 func TestScheduleDispatchUsesDiscoveredIdentifier(t *testing.T) {
-	store, err := workflow.Open(t.TempDir(), workflow.EchoResponder)
+	store, err := workflow.OpenRunner(t.TempDir(), workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := discover.Application{Schedules: []discover.Schedule{{ID: "heartbeat"}}}
+	app := discover.Manifest{Schedules: []discover.PublishedSchedule{{ID: "heartbeat"}}}
 	target := httptest.NewServer(server.Handler(app, store))
 	t.Cleanup(target.Close)
 	response, err := http.Post(
@@ -229,18 +219,37 @@ func TestScheduleDispatchUsesDiscoveredIdentifier(t *testing.T) {
 }
 
 func TestInfoRedactsProjectRootAndInstructions(t *testing.T) {
-	store, err := workflow.Open(t.TempDir(), workflow.EchoResponder)
+	store, err := workflow.OpenRunner(t.TempDir(), workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := discover.Application{
-		Root:         "/private/project",
-		Instructions: "api-key-secret",
-		Model:        "provider/model",
-		Tools:        []string{"weather"},
-		Schedules:    []discover.Schedule{{ID: "hourly", Cron: "0 * * * *", Path: "/private/project/hourly.ts"}},
+	root := t.TempDir()
+	agentRoot := filepath.Join(root, "agent")
+	for path, contents := range map[string]string{
+		"instructions.md":           "api-key-secret",
+		"agent.ts":                  `export default { model: "provider/model" };`,
+		"tools/weather.ts":          "export default {};",
+		"schedules/hourly.ts":       `export default { cron: "0 * * * *" };`,
+		"skills/research/SKILL.md":  "# Research",
+		"channels/slack.ts":         "export default {};",
+		"connections/warehouse.mjs": "export default {};",
+	} {
+		fullPath := filepath.Join(agentRoot, filepath.FromSlash(path))
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(fullPath, []byte(contents), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
-	target := httptest.NewServer(server.Handler(app, store))
+	if err := os.MkdirAll(filepath.Join(agentRoot, "subagents", "reviewer"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app, err := discover.ApplicationAt(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := httptest.NewServer(server.Handler(app.Manifest(), store))
 	t.Cleanup(target.Close)
 
 	response, err := http.Get(target.URL + "/eve/v1/info")
@@ -274,15 +283,29 @@ func TestInfoRedactsProjectRootAndInstructions(t *testing.T) {
 	if got := string(info["model"]); got != `"provider/model"` {
 		t.Fatalf("model = %s", got)
 	}
+	for key, value := range map[string]string{
+		"tools":       `["weather"]`,
+		"skills":      `["research"]`,
+		"channels":    `["slack"]`,
+		"connections": `["warehouse"]`,
+		"subagents":   `["reviewer"]`,
+	} {
+		if got := string(info[key]); got != value {
+			t.Fatalf("%s = %s, want %s", key, got, value)
+		}
+	}
+	if got := string(info["schedules"]); got != `[{"id":"hourly","cron":"0 * * * *"}]` {
+		t.Fatalf("schedules = %s", got)
+	}
 }
 
-func serve(t *testing.T, responder workflow.Responder) *httptest.Server {
+func serve(t *testing.T, response workflowtest.Response) *httptest.Server {
 	t.Helper()
-	store, err := workflow.Open(t.TempDir(), responder)
+	store, err := workflow.OpenRunner(t.TempDir(), workflowtest.Runner(response))
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := httptest.NewServer(server.Handler(discover.Application{}, store))
+	target := httptest.NewServer(server.Handler(discover.Manifest{}, store))
 	t.Cleanup(target.Close)
 	t.Cleanup(func() { _ = store.Close() })
 	return target
@@ -294,7 +317,7 @@ func serveRunner(t *testing.T, runner workflow.Runner) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := httptest.NewServer(server.Handler(discover.Application{}, store))
+	target := httptest.NewServer(server.Handler(discover.Manifest{}, store))
 	t.Cleanup(target.Close)
 	t.Cleanup(func() { _ = store.Close() })
 	return target

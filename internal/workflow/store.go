@@ -75,8 +75,8 @@ type Turn struct {
 	History   []Event
 }
 
-// Emit persists one turn-scoped runtime event before returning.
-type Emit func(eventType string, data any) error
+// Emit persists one typed, turn-scoped runtime event before returning.
+type Emit func(RunnerEvent) error
 
 // Runner owns the model and tool execution loop for one turn.
 type Runner interface {
@@ -90,9 +90,6 @@ type RunnerFunc func(context.Context, Turn, Emit) (string, error)
 func (f RunnerFunc) Run(ctx context.Context, turn Turn, emit Emit) (string, error) {
 	return f(ctx, turn, emit)
 }
-
-// Responder is the legacy deterministic response seam used by compatibility tests.
-type Responder func(context.Context, string, []Event) (string, error)
 
 // TurnResult identifies a completed durable turn.
 type TurnResult struct {
@@ -157,50 +154,6 @@ type Store struct {
 	workers      sync.WaitGroup
 	closeOnce    sync.Once
 	closeErr     error
-}
-
-// Open creates a store using the legacy responder seam.
-func Open(root string, responder Responder) (*Store, error) {
-	if responder == nil {
-		responder = EchoResponder
-	}
-	return OpenRunner(root, ResponderRunner(responder))
-}
-
-// ResponderRunner adapts a one-shot responder to the same observable step and
-// assistant-message event contract as a real model runner.
-func ResponderRunner(responder Responder) Runner {
-	return RunnerFunc(func(ctx context.Context, turn Turn, emit Emit) (string, error) {
-		step := map[string]any{
-			"sequence": turn.Sequence, "stepIndex": 0, "turnId": turn.TurnID,
-		}
-		if err := emit("step.started", step); err != nil {
-			return "", err
-		}
-		message, err := responder(ctx, turn.Message, turn.History)
-		if err != nil {
-			return "", err
-		}
-		if err := emit("message.appended", map[string]any{
-			"messageDelta": message, "messageSoFar": message,
-			"sequence": turn.Sequence, "stepIndex": 0, "turnId": turn.TurnID,
-		}); err != nil {
-			return "", err
-		}
-		if err := emit("message.completed", map[string]any{
-			"finishReason": "stop", "message": message,
-			"sequence": turn.Sequence, "stepIndex": 0, "turnId": turn.TurnID,
-		}); err != nil {
-			return "", err
-		}
-		if err := emit("step.completed", map[string]any{
-			"finishReason": "stop", "sequence": turn.Sequence,
-			"stepIndex": 0, "turnId": turn.TurnID,
-		}); err != nil {
-			return "", err
-		}
-		return message, nil
-	})
 }
 
 // OpenRunner creates a store, repairs incomplete tail writes, and settles turns
@@ -294,17 +247,6 @@ func OpenRunner(root string, runner Runner) (*Store, error) {
 		}
 	}
 	return store, nil
-}
-
-// EchoResponder provides deterministic Eve stress-fixture semantics.
-func EchoResponder(_ context.Context, message string, history []Event) (string, error) {
-	turn := 1
-	for _, event := range history {
-		if event.Type == "turn.completed" {
-			turn++
-		}
-	}
-	return fmt.Sprintf("stress-ack:%d:%s", turn, message), nil
 }
 
 // CreateSession creates a session and persists its initial event before returning.
@@ -499,7 +441,8 @@ func (s *Store) startWithDone(
 func (s *Store) execute(ctx context.Context, turn Turn, nextToken string, active *activeTurn) {
 	defer s.workers.Done()
 	result := TurnResult{SessionID: turn.SessionID, TurnID: turn.TurnID}
-	emit := func(eventType string, data any) error {
+	runnerEvents := newRunnerEventSequence()
+	emit := func(event RunnerEvent) error {
 		state, exists := s.existingSession(turn.SessionID)
 		if !exists {
 			return ErrSessionNotFound
@@ -516,10 +459,16 @@ func (s *Store) execute(ctx context.Context, turn Turn, nextToken string, active
 		if cancelled {
 			return context.Canceled
 		}
-		_, err := s.appendLocked(turn.SessionID, turn.TurnID, eventType, data)
+		if !runnerEvents.accept(event, turn) {
+			return errors.New("runner emitted an invalid event")
+		}
+		_, err := s.appendLocked(turn.SessionID, turn.TurnID, event.eventType, event.data)
 		return err
 	}
 	message, runErr := s.runner.Run(ctx, turn, emit)
+	if runErr == nil && !runnerEvents.complete() {
+		runErr = errors.New("runner ended with an incomplete event sequence")
+	}
 	result.Message = message
 
 	s.mu.Lock()
@@ -1090,6 +1039,7 @@ func rewriteSessionLog(root *os.Root, name string, events []Event) error {
 
 func recoveryStateFor(events []Event) (recoveryState, error) {
 	var state recoveryState
+	runnerEvents := newRunnerEventSequence()
 	sessionStarted := false
 	nextSequence := 0
 	seenTurnIDs := make(map[string]struct{})
@@ -1152,6 +1102,7 @@ func recoveryStateFor(events []Event) (recoveryState, error) {
 			state.active = true
 			state.cancelRequested = false
 			state.needsWaiting = false
+			runnerEvents = newRunnerEventSequence()
 			seenTurnIDs[event.TurnID] = struct{}{}
 			nextSequence++
 		case "turn.cancellation.requested":
@@ -1180,10 +1131,12 @@ func recoveryStateFor(events []Event) (recoveryState, error) {
 			if state.cancelRequested && event.Type != "turn.cancelled" {
 				return recoveryState{}, errors.New("cancelled turn has a non-cancellation terminal event")
 			}
+			if event.Type == "turn.completed" && !runnerEvents.empty() && !runnerEvents.complete() {
+				return recoveryState{}, errors.New("completed turn has an incomplete runner event sequence")
+			}
 			state.active = false
 			state.needsWaiting = true
-		case "message.received", "step.started", "message.appended", "message.completed",
-			"step.completed", "step.failed", "actions.requested", "action.result":
+		case "message.received":
 			if !state.active || state.cancelRequested || event.TurnID != state.turnID {
 				return recoveryState{}, errors.New("turn event does not match the active turn")
 			}
@@ -1193,6 +1146,18 @@ func recoveryStateFor(events []Event) (recoveryState, error) {
 			}
 			if sequence != state.sequence {
 				return recoveryState{}, errors.New("turn event does not match the active sequence")
+			}
+		case "step.started", "message.appended", "message.completed", "step.completed",
+			"step.failed", "actions.requested", "action.result":
+			if !state.active || state.cancelRequested || event.TurnID != state.turnID {
+				return recoveryState{}, errors.New("runner event does not match the active turn")
+			}
+			runnerEvent, err := runnerEventFromStored(event)
+			if err != nil {
+				return recoveryState{}, err
+			}
+			if !runnerEvents.accept(runnerEvent, Turn{Sequence: state.sequence, TurnID: state.turnID}) {
+				return recoveryState{}, errors.New("runner event sequence is invalid")
 			}
 		default:
 			if event.TurnID != "" &&

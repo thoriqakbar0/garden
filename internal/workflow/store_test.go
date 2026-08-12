@@ -13,10 +13,11 @@ import (
 	"time"
 
 	"github.com/thoriqakbar0/garden/internal/workflow"
+	"github.com/thoriqakbar0/garden/internal/workflowtest"
 )
 
 func TestSequentialTurnsPersistAndReplay(t *testing.T) {
-	store := open(t, workflow.EchoResponder)
+	store := openEcho(t)
 	sessionID, err := store.CreateSession()
 	if err != nil {
 		t.Fatal(err)
@@ -41,8 +42,183 @@ func TestSequentialTurnsPersistAndReplay(t *testing.T) {
 	}
 }
 
+func TestStoreRejectsInvalidRunnerEventBeforePersistence(t *testing.T) {
+	runner := workflow.RunnerFunc(func(
+		_ context.Context,
+		_ workflow.Turn,
+		emit workflow.Emit,
+	) (string, error) {
+		return "", emit(workflow.RunnerEvent{})
+	})
+	store, err := workflow.OpenRunner(t.TempDir(), runner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	sessionID, err := store.CreateSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Send(context.Background(), sessionID, "hello"); err == nil ||
+		!strings.Contains(err.Error(), "invalid event") {
+		t.Fatalf("invalid runner event error = %v", err)
+	}
+	events, err := store.Replay(sessionID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, event := range events {
+		if event.Type == "" {
+			t.Fatalf("invalid event reached persistence: %#v", event)
+		}
+	}
+}
+
+func TestStoreRejectsRunnerEventForDifferentTurn(t *testing.T) {
+	runner := workflow.RunnerFunc(func(
+		_ context.Context,
+		_ workflow.Turn,
+		emit workflow.Emit,
+	) (string, error) {
+		return "", emit(workflow.MessageCompleted(
+			workflow.Step{Sequence: 99, StepIndex: 0, TurnID: "turn_wrong"},
+			"wrong turn",
+			"stop",
+			workflow.CompletionMetadata{},
+		))
+	})
+	store, err := workflow.OpenRunner(t.TempDir(), runner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	sessionID, err := store.CreateSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Send(context.Background(), sessionID, "hello"); err == nil ||
+		!strings.Contains(err.Error(), "invalid event") {
+		t.Fatalf("wrong-turn runner event error = %v", err)
+	}
+}
+
+func TestStoreRejectsInvalidRunnerEventSequences(t *testing.T) {
+	step := func(turn workflow.Turn) workflow.Step {
+		return workflow.Step{Sequence: turn.Sequence, StepIndex: 0, TurnID: turn.TurnID}
+	}
+	action := workflow.ActionRequest{
+		CallID: "call-1", Input: json.RawMessage(`{}`), Kind: "tool-call", ToolName: "test",
+	}
+	result := workflow.ActionResult{
+		CallID: "call-1", Kind: "tool-result", Output: json.RawMessage(`{}`), ToolName: "test",
+	}
+	tests := []struct {
+		name string
+		run  func(workflow.Turn, workflow.Emit) error
+	}{
+		{
+			name: "completion before start",
+			run: func(turn workflow.Turn, emit workflow.Emit) error {
+				return emit(workflow.StepCompleted(step(turn), "stop", workflow.CompletionMetadata{}))
+			},
+		},
+		{
+			name: "duplicate completion",
+			run: func(turn workflow.Turn, emit workflow.Emit) error {
+				current := step(turn)
+				for _, event := range []workflow.RunnerEvent{
+					workflow.StepStarted(current),
+					workflow.MessageAppended(current, "done", "done"),
+					workflow.MessageCompleted(current, "done", "stop", workflow.CompletionMetadata{}),
+					workflow.StepCompleted(current, "stop", workflow.CompletionMetadata{}),
+				} {
+					if err := emit(event); err != nil {
+						return err
+					}
+				}
+				return emit(workflow.StepCompleted(current, "stop", workflow.CompletionMetadata{}))
+			},
+		},
+		{
+			name: "result without request",
+			run: func(turn workflow.Turn, emit workflow.Emit) error {
+				current := step(turn)
+				if err := emit(workflow.StepStarted(current)); err != nil {
+					return err
+				}
+				return emit(workflow.ActionCompleted(current, result))
+			},
+		},
+		{
+			name: "failed result without failure details",
+			run: func(turn workflow.Turn, emit workflow.Emit) error {
+				current := step(turn)
+				for _, event := range []workflow.RunnerEvent{
+					workflow.StepStarted(current),
+					workflow.ActionsRequested(current, []workflow.ActionRequest{action}),
+					workflow.StepCompleted(current, "tool-calls", workflow.CompletionMetadata{}),
+				} {
+					if err := emit(event); err != nil {
+						return err
+					}
+				}
+				return emit(workflow.ActionFailed(current, "failed", result, workflow.ActionFailure{}))
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			runner := workflow.RunnerFunc(func(
+				_ context.Context,
+				turn workflow.Turn,
+				emit workflow.Emit,
+			) (string, error) {
+				return "", test.run(turn, emit)
+			})
+			store, err := workflow.OpenRunner(t.TempDir(), runner)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = store.Close() })
+			sessionID, err := store.CreateSession()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := store.Send(context.Background(), sessionID, "hello"); err == nil ||
+				!strings.Contains(err.Error(), "invalid event") {
+				t.Fatalf("invalid sequence error = %v", err)
+			}
+		})
+	}
+}
+
+func TestActionResultConstructorsOwnSuccessState(t *testing.T) {
+	step := workflow.Step{Sequence: 1, StepIndex: 2, TurnID: "turn_test"}
+	input := workflow.ActionResult{
+		CallID: "call-1", IsError: true, Kind: "tool-result",
+		Output: json.RawMessage(`{}`), ToolName: "test",
+	}
+	completed := eventPayload(t, workflow.ActionCompleted(step, input))
+	completedResult := completed["result"].(map[string]any)
+	if completed["status"] != "completed" || completedResult["isError"] != nil {
+		t.Fatalf("completed action = %#v", completed)
+	}
+	failed := eventPayload(t, workflow.ActionFailed(
+		step,
+		"failed",
+		workflow.ActionResult{
+			CallID: "call-1", Kind: "tool-result", Output: json.RawMessage(`{}`), ToolName: "test",
+		},
+		workflow.ActionFailure{Code: "FAILED", Message: "The action failed."},
+	))
+	failedResult := failed["result"].(map[string]any)
+	if failed["status"] != "failed" || failedResult["isError"] != true {
+		t.Fatalf("failed action = %#v", failed)
+	}
+}
+
 func TestConcurrentSessionsRemainIsolated(t *testing.T) {
-	store := open(t, workflow.EchoResponder)
+	store := openEcho(t)
 	const count = 50
 	var wait sync.WaitGroup
 	errs := make(chan error, count)
@@ -126,7 +302,7 @@ func TestCancellationConsumesStaleGuardWithoutCancellingActiveTurn(t *testing.T)
 }
 
 func TestSessionIDCannotEscapeStore(t *testing.T) {
-	store := open(t, workflow.EchoResponder)
+	store := openEcho(t)
 	for _, id := range []string{"../../outside", "ses_ok/../../outside", "not-a-session"} {
 		if _, err := store.Replay(id, 0); !errors.Is(err, workflow.ErrInvalidSessionID) {
 			t.Fatalf("Replay(%q) error = %v", id, err)
@@ -135,7 +311,7 @@ func TestSessionIDCannotEscapeStore(t *testing.T) {
 }
 
 func TestContinuationTokenSelectsOwnerAndCreatesUnownedSession(t *testing.T) {
-	store := open(t, workflow.EchoResponder)
+	store := openEcho(t)
 	first, err := store.StartSession("first")
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +341,7 @@ func TestContinuationTokenSelectsOwnerAndCreatesUnownedSession(t *testing.T) {
 }
 
 func TestReplaySupportsTailRelativeCursor(t *testing.T) {
-	store := open(t, workflow.EchoResponder)
+	store := openEcho(t)
 	id, err := store.CreateSession()
 	if err != nil {
 		t.Fatal(err)
@@ -184,17 +360,17 @@ func TestReplaySupportsTailRelativeCursor(t *testing.T) {
 
 func TestStoreAllowsOnlyOneWriter(t *testing.T) {
 	root := t.TempDir()
-	first, err := workflow.Open(root, workflow.EchoResponder)
+	first, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := workflow.Open(root, workflow.EchoResponder); !errors.Is(err, workflow.ErrStoreInUse) {
+	if _, err := workflow.OpenRunner(root, workflowtest.EchoRunner()); !errors.Is(err, workflow.ErrStoreInUse) {
 		t.Fatalf("second writer error = %v", err)
 	}
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
-	third, err := workflow.Open(root, workflow.EchoResponder)
+	third, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatalf("open after close: %v", err)
 	}
@@ -204,7 +380,7 @@ func TestStoreAllowsOnlyOneWriter(t *testing.T) {
 }
 
 func TestCloseWakesEventWaiters(t *testing.T) {
-	store, err := workflow.Open(t.TempDir(), workflow.EchoResponder)
+	store, err := workflow.OpenRunner(t.TempDir(), workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +408,7 @@ func TestCloseWakesEventWaiters(t *testing.T) {
 
 func TestOpenSessionRootCannotBeRedirectedAfterStartup(t *testing.T) {
 	root := t.TempDir()
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +449,7 @@ func TestOpenSessionRootCannotBeRedirectedAfterStartup(t *testing.T) {
 
 func TestConcurrentUnownedContinuationHasOneOwner(t *testing.T) {
 	root := t.TempDir()
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +563,7 @@ func TestOpenRejectsSymlinkedSessionLog(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(sessions, "ses_escape.jsonl")); err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if store != nil || err == nil {
 		t.Fatalf("open symlinked log = %#v, %v", store, err)
 	}
@@ -406,7 +582,7 @@ func TestOpenRejectsSymlinkedSessionsDirectory(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(root, "sessions")); err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if store != nil || err == nil {
 		t.Fatalf("open symlinked sessions directory = %#v, %v", store, err)
 	}
@@ -443,7 +619,7 @@ func TestOpenRejectsCorruptLifecyclePayload(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if store != nil || err == nil {
 		t.Fatalf("open corrupt lifecycle = %#v, %v", store, err)
 	}
@@ -491,7 +667,7 @@ func TestOpenRejectsCompletionAfterDurableCancellationIntent(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if store != nil || err == nil {
 		t.Fatalf("open cancelled completion = %#v, %v", store, err)
 	}
@@ -515,7 +691,7 @@ func TestOpenAtomicallyMigratesLegacySessionLog(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -605,7 +781,7 @@ func TestOpenRepairsPartialTailAndSettlesInterruptedTurn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -678,7 +854,7 @@ func TestOpenRepairsMissingWaitingAfterDurableTerminal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -738,7 +914,7 @@ func TestOpenFinishesDurableCancellationIntent(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
-	store, err := workflow.Open(root, workflow.EchoResponder)
+	store, err := workflow.OpenRunner(root, workflowtest.EchoRunner())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -765,14 +941,37 @@ func TestOpenFinishesDurableCancellationIntent(t *testing.T) {
 	waitForBoundary(t, store, id)
 }
 
-func open(t *testing.T, responder workflow.Responder) *workflow.Store {
+func open(t *testing.T, response workflowtest.Response) *workflow.Store {
 	t.Helper()
-	store, err := workflow.Open(t.TempDir(), responder)
+	store, err := workflow.OpenRunner(t.TempDir(), workflowtest.Runner(response))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
 	return store
+}
+
+func openEcho(t *testing.T) *workflow.Store {
+	t.Helper()
+	store, err := workflow.OpenRunner(t.TempDir(), workflowtest.EchoRunner())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	return store
+}
+
+func eventPayload(t *testing.T, event workflow.RunnerEvent) map[string]any {
+	t.Helper()
+	payload, err := event.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	return decoded
 }
 
 func waitForBoundary(t *testing.T, store *workflow.Store, sessionID string) {

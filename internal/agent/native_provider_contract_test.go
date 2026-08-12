@@ -28,7 +28,7 @@ func TestNativeProviderToolContinuationContract(t *testing.T) {
 		}))
 		defer server.Close()
 
-		responder, err := responderFromConfig(weatherApplication(t), env(map[string]string{
+		runner, err := runnerFromConfig(weatherApplication(t), env(map[string]string{
 			"GARDEN_MODEL_BACKEND":      "anthropic",
 			"GARDEN_ANTHROPIC_API_KEY":  "test-key",
 			"GARDEN_ANTHROPIC_BASE_URL": server.URL,
@@ -37,7 +37,7 @@ func TestNativeProviderToolContinuationContract(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := send(t, responder)
+		result, err := send(t, runner)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +75,7 @@ func TestNativeProviderToolContinuationContract(t *testing.T) {
 		}))
 		defer server.Close()
 
-		responder, err := responderFromConfig(weatherApplication(t), env(map[string]string{
+		runner, err := runnerFromConfig(weatherApplication(t), env(map[string]string{
 			"GARDEN_MODEL_BACKEND":   "google",
 			"GARDEN_GOOGLE_API_KEY":  "test-key",
 			"GARDEN_GOOGLE_BASE_URL": server.URL,
@@ -84,7 +84,7 @@ func TestNativeProviderToolContinuationContract(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := send(t, responder)
+		result, err := send(t, runner)
 		if err != nil {
 			t.Fatal(err)
 		}

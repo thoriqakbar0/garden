@@ -25,21 +25,22 @@ func TestApplicationAtDiscoversFilesystemContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if app.Model != "openai/gpt-5.4-mini" {
-		t.Fatalf("model = %q", app.Model)
+	info := app.Info()
+	if info.Model != "openai/gpt-5.4-mini" {
+		t.Fatalf("model = %q", info.Model)
 	}
-	assertOne(t, app.Tools, "weather")
-	assertOne(t, app.Skills, "research")
-	assertOne(t, app.Channels, "slack")
-	assertOne(t, app.Subagents, "reviewer")
-	assertOne(t, app.Evals, "runtime/replay")
-	if len(app.Schedules) != 3 ||
-		app.Schedules[0].ID != "daily" || app.Schedules[0].Cron != "0 8 * * *" ||
-		app.Schedules[1].ID != "hourly" || app.Schedules[1].Cron != "0 * * * *" ||
-		app.Schedules[1].Path != "agent/schedules/hourly.mjs" ||
-		app.Schedules[2].ID != "reports/weekly" || app.Schedules[2].Cron != "0 9 * * 1" ||
-		app.Schedules[2].Path != "agent/schedules/reports/weekly.md" {
-		t.Fatalf("schedules = %#v", app.Schedules)
+	assertOne(t, info.Tools, "weather")
+	assertOne(t, info.Skills, "research")
+	assertOne(t, info.Channels, "slack")
+	assertOne(t, info.Subagents, "reviewer")
+	assertOne(t, info.Evals, "runtime/replay")
+	if len(info.Schedules) != 3 ||
+		info.Schedules[0].ID != "daily" || info.Schedules[0].Cron != "0 8 * * *" ||
+		info.Schedules[1].ID != "hourly" || info.Schedules[1].Cron != "0 * * * *" ||
+		info.Schedules[1].Path != "agent/schedules/hourly.mjs" ||
+		info.Schedules[2].ID != "reports/weekly" || info.Schedules[2].Cron != "0 9 * * 1" ||
+		info.Schedules[2].Path != "agent/schedules/reports/weekly.md" {
+		t.Fatalf("schedules = %#v", info.Schedules)
 	}
 }
 

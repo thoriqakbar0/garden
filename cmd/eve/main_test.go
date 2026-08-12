@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -13,7 +15,7 @@ func TestHelpDocumentsGardenInstallation(t *testing.T) {
 	for _, argument := range []string{"help", "--help", "-h"} {
 		t.Run(argument, func(t *testing.T) {
 			var output strings.Builder
-			if err := run([]string{argument}, &output); err != nil {
+			if err := run([]string{argument}, commandStreams{stdout: &output, stderr: io.Discard}); err != nil {
 				t.Fatal(err)
 			}
 			for _, required := range []string{
@@ -31,8 +33,52 @@ func TestHelpDocumentsGardenInstallation(t *testing.T) {
 	}
 }
 
+func TestInfoUsesCommandStreams(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "agent"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(root, "agent", "instructions.md"),
+		[]byte("Be useful."),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	var output strings.Builder
+	if err := run(
+		[]string{"info", "--root", root},
+		commandStreams{stdout: &output, stderr: io.Discard},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), `"instructions": "Be useful."`) {
+		t.Fatalf("info output = %s", output.String())
+	}
+}
+
+func TestInfoExposesOnlyRootOption(t *testing.T) {
+	var help strings.Builder
+	if err := run(
+		[]string{"info", "--help"},
+		commandStreams{stdout: io.Discard, stderr: &help},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(help.String(), "-root string") || strings.Contains(help.String(), "-addr") {
+		t.Fatalf("info help = %q", help.String())
+	}
+	err := run(
+		[]string{"info", "--addr", "127.0.0.1:3000"},
+		commandStreams{stdout: io.Discard, stderr: io.Discard},
+	)
+	if err == nil || !strings.Contains(err.Error(), "flag provided but not defined: -addr") {
+		t.Fatalf("info --addr error = %v", err)
+	}
+}
+
 func TestUnknownCommandReturnsGardenUsage(t *testing.T) {
-	err := run([]string{"unknown"}, io.Discard)
+	err := run([]string{"unknown"}, commandStreams{stdout: io.Discard, stderr: io.Discard})
 	if err == nil {
 		t.Fatal("unknown command succeeded")
 	}
@@ -44,7 +90,7 @@ func TestUnknownCommandReturnsGardenUsage(t *testing.T) {
 }
 
 func TestHelpReportsOutputFailure(t *testing.T) {
-	err := run([]string{"help"}, failingWriter{})
+	err := run([]string{"help"}, commandStreams{stdout: failingWriter{}, stderr: io.Discard})
 	if err == nil || !strings.Contains(err.Error(), "write help") {
 		t.Fatalf("error = %v", err)
 	}
@@ -53,7 +99,10 @@ func TestHelpReportsOutputFailure(t *testing.T) {
 func TestCommandHelpSucceeds(t *testing.T) {
 	for _, command := range []string{"init", "info", "run", "serve", "eval"} {
 		t.Run(command, func(t *testing.T) {
-			if err := run([]string{command, "--help"}, io.Discard); err != nil {
+			if err := run(
+				[]string{command, "--help"},
+				commandStreams{stdout: io.Discard, stderr: io.Discard},
+			); err != nil {
 				t.Fatalf("%s --help: %v", command, err)
 			}
 		})
@@ -74,7 +123,7 @@ func TestAuthenticatedHandlerRequiresTokenForPublicBind(t *testing.T) {
 }
 
 func TestServeDefaultsToLoopback(t *testing.T) {
-	options, err := parseServeOptions(nil)
+	options, err := parseServeOptions(nil, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +136,10 @@ func TestServeDefaultsToLoopback(t *testing.T) {
 }
 
 func TestServeSelectsOfficialEveRuntimeExplicitly(t *testing.T) {
-	options, err := parseServeOptions([]string{"--runtime", "eve", "--root", "/tmp/agent"})
+	options, err := parseServeOptions(
+		[]string{"--runtime", "eve", "--root", "/tmp/agent"},
+		io.Discard,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

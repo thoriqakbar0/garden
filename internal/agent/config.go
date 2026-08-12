@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -23,12 +22,12 @@ const (
 )
 
 // RunnerFromEnvironment configures the workflow runner used by CLI and HTTP modes.
-func RunnerFromEnvironment(app discover.Application) (workflow.Runner, error) {
+func RunnerFromEnvironment(app discover.NativeSpec) (workflow.Runner, error) {
 	return runnerFromEnvironment(app, os.Getenv, exec.LookPath, http.DefaultClient, time.Now())
 }
 
 func runnerFromEnvironment(
-	app discover.Application,
+	app discover.NativeSpec,
 	getenv func(string) string,
 	lookPath func(string) (string, error),
 	client *http.Client,
@@ -46,29 +45,7 @@ func runnerFromEnvironment(
 	return runnerFromConfig(app, getenv, client, now)
 }
 
-// ResponderFromEnvironment preserves the one-shot responder seam for tests and
-// older embedders. Runtime entrypoints should use RunnerFromEnvironment.
-func ResponderFromEnvironment(app discover.Application) (workflow.Responder, error) {
-	runner, err := RunnerFromEnvironment(app)
-	if err != nil {
-		return nil, err
-	}
-	return func(ctx context.Context, current string, events []workflow.Event) (string, error) {
-		return runner.Run(ctx, workflow.Turn{Message: current, History: events}, func(string, any) error {
-			return nil
-		})
-	}, nil
-}
-
-func responderFromConfig(app discover.Application, getenv func(string) string, client *http.Client, now time.Time) (workflow.Responder, error) {
-	runner, err := runnerFromConfig(app, getenv, client, now)
-	if err != nil {
-		return nil, err
-	}
-	return runner.Respond, nil
-}
-
-func runnerFromConfig(app discover.Application, getenv func(string) string, client *http.Client, _ time.Time) (*Runner, error) {
+func runnerFromConfig(app discover.NativeSpec, getenv func(string) string, client *http.Client, _ time.Time) (*Runner, error) {
 	if client == nil {
 		client = http.DefaultClient
 	}

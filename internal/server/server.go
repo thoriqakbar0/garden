@@ -21,7 +21,7 @@ var decimalInteger = regexp.MustCompile(`^-?\d+$`)
 const maxRequestBodyBytes = 1 << 20
 
 // Handler constructs the Eve-compatible local HTTP surface.
-func Handler(app discover.Application, store *workflow.Store) http.Handler {
+func Handler(app discover.Manifest, store *workflow.Store) http.Handler {
 	server := &api{app: app, store: store}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.health)
@@ -36,7 +36,7 @@ func Handler(app discover.Application, store *workflow.Store) http.Handler {
 }
 
 type api struct {
-	app   discover.Application
+	app   discover.Manifest
 	store *workflow.Store
 }
 

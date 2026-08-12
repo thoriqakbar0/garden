@@ -3,6 +3,8 @@ package agent
 import (
 	"errors"
 	"strings"
+
+	"github.com/thoriqakbar0/garden/internal/workflow"
 )
 
 type providerID string
@@ -146,21 +148,21 @@ func normalizeStopReason(provider providerID, raw string, hasToolCalls bool) (st
 	return "", errors.New("model returned an unsupported finish reason")
 }
 
-func addModelMetadata(data map[string]any, metadata modelMetadata) {
+func workflowCompletionMetadata(metadata modelMetadata) workflow.CompletionMetadata {
 	if metadata.Provider == "" {
-		return
-	}
-	data["providerMetadata"] = map[string]any{
-		"api": metadata.API, "model": metadata.Model,
-		"provider": string(metadata.Provider), "responseId": metadata.ResponseID,
+		return workflow.CompletionMetadata{}
 	}
 	totalInput := metadata.Usage.Input + metadata.Usage.CacheRead + metadata.Usage.CacheWrite
-	data["usage"] = map[string]int{
-		"inputTokens":      totalInput,
-		"outputTokens":     metadata.Usage.Output,
-		"cacheReadTokens":  metadata.Usage.CacheRead,
-		"cacheWriteTokens": metadata.Usage.CacheWrite,
-		"totalTokens":      totalInput + metadata.Usage.Output,
+	return workflow.CompletionMetadata{
+		Provider: &workflow.ProviderMetadata{
+			API: metadata.API, Model: metadata.Model,
+			Provider: string(metadata.Provider), ResponseID: metadata.ResponseID,
+		},
+		Usage: &workflow.TokenUsage{
+			InputTokens: totalInput, OutputTokens: metadata.Usage.Output,
+			CacheReadTokens: metadata.Usage.CacheRead, CacheWriteTokens: metadata.Usage.CacheWrite,
+			TotalTokens: totalInput + metadata.Usage.Output,
+		},
 	}
 }
 

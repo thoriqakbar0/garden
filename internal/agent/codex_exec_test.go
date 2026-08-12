@@ -39,13 +39,13 @@ printf '%s\n' \
 	var durable strings.Builder
 	result, err := runner.Run(context.Background(), workflow.Turn{
 		SessionID: "ses_test", TurnID: "turn_test", Message: "Inspect the project.", Sequence: 1,
-	}, func(eventType string, data any) error {
-		eventTypes = append(eventTypes, eventType)
-		encoded, marshalErr := json.Marshal(data)
-		if marshalErr != nil {
-			return marshalErr
+	}, func(event workflow.RunnerEvent) error {
+		eventTypes = append(eventTypes, event.Type())
+		payload, payloadErr := event.Payload()
+		if payloadErr != nil {
+			return payloadErr
 		}
-		durable.Write(encoded)
+		durable.Write(payload)
 		return nil
 	})
 	if err != nil {
@@ -68,7 +68,7 @@ printf '%s\n' \
 
 func TestCodexExecConfigurationIsSandboxed(t *testing.T) {
 	root := t.TempDir()
-	app := discover.Application{Root: root, Instructions: "test"}
+	app := discover.NativeSpec{Root: root, Instructions: "test"}
 	runner, err := codexExecRunnerFromConfig(app, env(nil), func(name string) (string, error) {
 		if name != "codex" {
 			t.Fatalf("looked up %q", name)
@@ -109,14 +109,14 @@ func TestCodexExecReportsEarlyProcessExit(t *testing.T) {
 		command: command, instructions: "test", model: defaultCodexModel,
 		root: t.TempDir(), sandbox: defaultCodexSandbox,
 	}
-	_, err := runner.Run(context.Background(), workflow.Turn{}, func(string, any) error { return nil })
+	_, err := runner.Run(context.Background(), workflow.Turn{}, func(workflow.RunnerEvent) error { return nil })
 	if err == nil || err.Error() != "Codex CLI exited with status 42" {
 		t.Fatalf("early exit error = %v", err)
 	}
 }
 
 func TestRuntimeSelectsCodexExecBackend(t *testing.T) {
-	app := discover.Application{Root: t.TempDir(), Instructions: "test"}
+	app := discover.NativeSpec{Root: t.TempDir(), Instructions: "test"}
 	runner, err := runnerFromEnvironment(
 		app,
 		env(map[string]string{"GARDEN_MODEL_BACKEND": "codex"}),
@@ -133,7 +133,7 @@ func TestRuntimeSelectsCodexExecBackend(t *testing.T) {
 }
 
 func TestRuntimeAutoDetectsCodexExecBackend(t *testing.T) {
-	app := discover.Application{Root: t.TempDir(), Instructions: "test"}
+	app := discover.NativeSpec{Root: t.TempDir(), Instructions: "test"}
 	lookups := 0
 	runner, err := runnerFromEnvironment(
 		app,
@@ -160,7 +160,7 @@ func TestRuntimeAutoDetectsCodexExecBackend(t *testing.T) {
 }
 
 func TestRuntimeRequiresBackendWhenCodexIsMissing(t *testing.T) {
-	app := discover.Application{Root: t.TempDir(), Instructions: "test", Model: "model"}
+	app := discover.NativeSpec{Root: t.TempDir(), Instructions: "test", Model: "model"}
 	_, err := runnerFromEnvironment(
 		app,
 		env(nil),
@@ -174,7 +174,7 @@ func TestRuntimeRequiresBackendWhenCodexIsMissing(t *testing.T) {
 }
 
 func TestRuntimeDoesNotOverrideExplicitBackend(t *testing.T) {
-	app := discover.Application{Root: t.TempDir(), Instructions: "test", Model: "model"}
+	app := discover.NativeSpec{Root: t.TempDir(), Instructions: "test", Model: "model"}
 	_, err := runnerFromEnvironment(
 		app,
 		env(map[string]string{"GARDEN_MODEL_BACKEND": "unsupported"}),
@@ -226,8 +226,8 @@ exec sleep 10
 		root: t.TempDir(), sandbox: defaultCodexSandbox,
 	}
 	started := time.Now()
-	_, err := runner.Run(ctx, workflow.Turn{TurnID: "turn_test"}, func(eventType string, _ any) error {
-		if eventType == "actions.requested" {
+	_, err := runner.Run(ctx, workflow.Turn{TurnID: "turn_test"}, func(event workflow.RunnerEvent) error {
+		if event.Type() == "actions.requested" {
 			cancel()
 		}
 		return nil
