@@ -5,6 +5,7 @@ import { useDitherScale } from "./dither-context";
 import { DitheredField, DitheredTrees } from "./dithered-field";
 
 const repositoryUrl = "https://github.com/thoriqakbar0/garden";
+const eveProjectUrl = "https://eve.dev/";
 const repositoryLinks = {
   compatibility: `${repositoryUrl}/blob/main/COMPATIBILITY.md`,
   documentation: `${repositoryUrl}/blob/main/README.md`,
@@ -58,6 +59,15 @@ function GardenMark() {
   );
 }
 
+function EveLogo() {
+  return (
+    <svg className="eve-flicker-logo" viewBox="0 0 169 53" aria-hidden="true" focusable="false">
+      <path d="M169 8.47h-51.39L81.73 53H70.36L113 0H169zM169 44.51v8.47h-45.87V44.5zM45.87 52.98H0V44.5h45.87zM38.66 30.55H0v-8.47h38.66z" />
+      <path d="M169 30.55h-38.66v-8.47H169zM75.52 8.47H0V0h75.52z" />
+    </svg>
+  );
+}
+
 function ExternalLinkCue() {
   return (
     <>
@@ -105,7 +115,14 @@ export function Home() {
           <div className="relative z-[1] mx-auto grid w-shell grid-cols-[minmax(0,44rem)] items-center max-[64rem]:grid-cols-1 max-[48rem]:gap-y-0">
             <div className={revealClassName("hero-copy max-w-[44rem]", heroStage >= 1)}>
               <h1 className="m-0 min-w-0 max-w-[10ch] font-display text-[clamp(4rem,7.6vw,6rem)] font-[650] leading-[0.95] tracking-[-0.04em] text-balance [overflow-wrap:anywhere] max-[64rem]:max-w-[11ch] max-[48rem]:max-w-[12ch] max-[48rem]:text-[clamp(2.9rem,12.8vw,3.45rem)]">
-                <span className="block text-ink">Run Eve on your own</span>
+                <span className="block text-ink">
+                  Run{" "}
+                  <a className="eve-flicker-link" href={eveProjectUrl} target="_blank" rel="noreferrer" aria-label="Visit the eve project">
+                    <span className="eve-flicker-word" aria-hidden="true">Eve</span>
+                    <EveLogo />
+                  </a>{" "}
+                  on your own
+                </span>
                 <span className="block text-forest">infrastructure.</span>
               </h1>
               <p className="mt-8 max-w-[38rem] text-[clamp(1.05rem,1.7vw,1.25rem)] leading-[1.6] text-ink-soft text-pretty max-[48rem]:mt-[1.1rem] max-[48rem]:text-base">

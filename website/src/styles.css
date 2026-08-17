@@ -128,6 +128,84 @@
   border-inline-end: 0;
 }
 
+.eve-flicker-link {
+  position: relative;
+  display: inline-block;
+  width: 1.78em;
+  height: 0.8em;
+  color: inherit;
+  text-decoration: none;
+  vertical-align: -0.04em;
+  white-space: nowrap;
+}
+
+.eve-flicker-word,
+.eve-flicker-logo {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+}
+
+.eve-flicker-word {
+  line-height: 0.8;
+}
+
+.eve-flicker-logo {
+  width: 1.55em;
+  max-width: none;
+  fill: currentColor;
+  opacity: 0;
+}
+
+.eve-flicker-link::after {
+  content: "";
+  position: absolute;
+  inset: auto 0.1em -0.04em;
+  height: 0.025em;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.eve-flicker-link:hover::after,
+.eve-flicker-link:focus-visible::after {
+  opacity: 1;
+}
+
+@keyframes eve-word-flicker {
+  0%, 47% { opacity: 1; }
+  48%, 97% { opacity: 0; }
+  98%, 100% { opacity: 1; }
+}
+
+@keyframes eve-logo-flicker {
+  0%, 47% { opacity: 0; }
+  48%, 50% { opacity: 0; }
+  51%, 97% { opacity: 1; }
+  98%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .eve-flicker-word,
+  .eve-flicker-logo {
+    animation-duration: 8s;
+    animation-iteration-count: infinite;
+    animation-timing-function: steps(1, end);
+  }
+
+  .eve-flicker-word { animation-name: eve-word-flicker; }
+  .eve-flicker-logo { animation-name: eve-logo-flicker; }
+
+  .eve-flicker-link:is(:hover, :focus-visible) .eve-flicker-word {
+    animation: none;
+    opacity: 0;
+  }
+
+  .eve-flicker-link:is(:hover, :focus-visible) .eve-flicker-logo {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 .hero {
   --hero-enter-duration: 280ms;
   --hero-enter-easing: cubic-bezier(0.16, 1, 0.3, 1);
