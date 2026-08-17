@@ -104,22 +104,22 @@ export function Home() {
           <DitheredField ditherScale={ditherScale} />
           <div className="relative z-[1] mx-auto grid w-shell grid-cols-[minmax(0,44rem)] items-center max-[64rem]:grid-cols-1 max-[48rem]:gap-y-0">
             <div className={revealClassName("hero-copy max-w-[44rem]", heroStage >= 1)}>
-              <h1 className="m-0 max-w-[10ch] font-display text-[clamp(4rem,7.6vw,6rem)] font-[650] leading-[0.95] tracking-[-0.04em] text-balance max-[64rem]:max-w-[11ch] max-[48rem]:max-w-[12ch] max-[48rem]:text-[clamp(2.9rem,12.8vw,3.45rem)]">
-                <span className="block text-ink">Run Eve on your</span>
+              <h1 className="m-0 min-w-0 max-w-[10ch] font-display text-[clamp(4rem,7.6vw,6rem)] font-[650] leading-[0.95] tracking-[-0.04em] text-balance [overflow-wrap:anywhere] max-[64rem]:max-w-[11ch] max-[48rem]:max-w-[12ch] max-[48rem]:text-[clamp(2.9rem,12.8vw,3.45rem)]">
+                <span className="block text-ink">Run Eve on your own</span>
                 <span className="block text-forest">infrastructure.</span>
               </h1>
               <p className="mt-8 max-w-[38rem] text-[clamp(1.05rem,1.7vw,1.25rem)] leading-[1.6] text-ink-soft text-pretty max-[48rem]:mt-[1.1rem] max-[48rem]:text-base">
-                Get the developer experience of Eve by Vercel on infrastructure
-                you control. Garden runs the documented compatible subset in a
-                self-hosted Go runtime.
+                Eve by Vercel is a framework and runtime for durable AI agents.
+                Garden runs your pinned Eve project on infrastructure you control,
+                with no hosted Garden service.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3.5 max-[48rem]:mt-[1.15rem] max-[31rem]:flex-nowrap max-[31rem]:gap-2.5">
-                <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.source} target="_blank" rel="noreferrer">
-                  Get Garden on GitHub <ExternalLinkCue />
+                <a className="button inline-flex min-h-13 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.source} target="_blank" rel="noreferrer">
+                  Explore on GitHub <ExternalLinkCue />
                 </a>
-                <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] px-5 text-sm font-[750] text-forest no-underline shadow-[inset_0_0_0_1px_var(--line-strong)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-paper-bright active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.documentation} target="_blank" rel="noreferrer">
-                  Read the README <ExternalLinkCue />
+                <a className="button inline-flex min-h-13 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] px-5 text-sm font-[750] text-forest no-underline shadow-[inset_0_0_0_1px_var(--line-strong)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-paper-bright active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.documentation} target="_blank" rel="noreferrer">
+                  Read how it works <ExternalLinkCue />
                 </a>
               </div>
 
@@ -137,11 +137,10 @@ export function Home() {
         <section className="runtime-section relative overflow-hidden py-[clamp(6rem,10vw,9rem)]" id="runtime">
           <div className="relative z-[1] mx-auto w-shell">
             <div className="grid grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.65fr)] items-end gap-12 max-[48rem]:grid-cols-1">
-              <h2 className="m-0 max-w-[16ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Choose the runtime boundary.</h2>
+              <h2 className="m-0 max-w-[16ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Choose what Garden runs.</h2>
               <p className="m-0 max-w-[38rem] text-[1.05rem] text-ink-soft text-pretty">
-                Run Garden’s compatible Go subset in one process, or use the same
-                project shape with a pinned Eve runtime. The interface stays
-                familiar; execution ownership stays explicit.
+                Run your pinned Eve project under Garden, or choose Garden’s native
+                compatible Go subset. Execution ownership stays explicit.
               </p>
             </div>
 
@@ -169,7 +168,7 @@ export function Home() {
               </div>
 
               <article className="mode relative min-h-[30rem] rounded-[var(--radius-lg)] bg-forest p-[clamp(1.6rem,3vw,2.6rem)] text-paper-bright shadow-[0_1.5rem_4rem_oklch(0.22_0.07_148/0.2)] max-[48rem]:min-h-0">
-                <h3 className="mb-5 max-w-[13ch] font-display text-[clamp(2rem,3.2vw,3rem)] leading-[1.05] tracking-[-0.035em] text-balance">Run Eve on your infrastructure.</h3>
+                <h3 className="mb-5 max-w-[13ch] font-display text-[clamp(2rem,3.2vw,3rem)] leading-[1.05] tracking-[-0.035em] text-balance">Run Eve on your own infrastructure.</h3>
                 <div className="mode-topline mb-4 flex justify-between gap-4">
                   <span className="font-mono text-xs font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[oklch(0.94_0.025_112/0.8)]">Eve by Vercel</span><code className="font-mono text-xs text-[oklch(0.94_0.025_112/0.8)]">eve@0.27.6</code>
                 </div>
@@ -280,10 +279,10 @@ export function Home() {
         <section className="relative overflow-hidden py-[clamp(7rem,12vw,11rem)] text-center">
           <div className="relative z-[1] mx-auto grid w-shell justify-items-center">
             <div className="closing-mark mb-8 grid size-16 -rotate-6 place-items-center rounded-[50%_50%_45%_55%] bg-leaf text-forest" aria-hidden="true"><GardenMark /></div>
-            <h2 className="m-0 max-w-[17ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Own a runtime you can inspect.</h2>
+            <h2 className="m-0 max-w-[17ch] font-display text-[clamp(2.7rem,5.3vw,4.8rem)] font-[650] leading-[1.02] tracking-[-0.04em] text-balance">Run Eve where you control the infrastructure.</h2>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5 max-[31rem]:flex-col max-[31rem]:items-stretch">
-              <a className="button inline-flex min-h-13 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.source} target="_blank" rel="noreferrer">
-                Get Garden on GitHub <ExternalLinkCue />
+              <a className="button inline-flex min-h-13 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-sm)] bg-forest px-5 text-sm font-[750] text-paper-bright no-underline shadow-[0_0.45rem_0.9rem_oklch(0.24_0.08_148/0.18),0_0.1rem_0.25rem_oklch(0.24_0.08_148/0.2)] transition-transform duration-160 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-forest-deep active:scale-96 motion-reduce:active:scale-100 max-[31rem]:min-w-0 max-[31rem]:flex-1 max-[31rem]:px-2.5 max-[31rem]:text-xs" href={repositoryLinks.source} target="_blank" rel="noreferrer">
+                Explore on GitHub <ExternalLinkCue />
               </a>
               <a className="inline-flex min-h-13 items-center gap-2 px-3 text-sm font-[750] text-forest" href={repositoryLinks.documentation} target="_blank" rel="noreferrer">
                 Read the Garden documentation <ExternalLinkCue />

@@ -1,0 +1,21 @@
+{
+  "scannedAt": "2026-08-17",
+  "designSystem": "DESIGN.md",
+  "framework": "React 19 with Vite 8 and TanStack Router",
+  "styling": "Tailwind CSS 4 with existing custom CSS for dither and motion effects",
+  "fonts": [
+    "Bricolage Grotesque Variable",
+    "Manrope Variable",
+    "Fira Code Variable"
+  ],
+  "palette": "Locked OKLCH Garden tokens in DESIGN.md and website/src/styles.css",
+  "motion": "Custom CSS transitions and WebGL dithered footage; no external motion library",
+  "spacing": "Existing responsive shell and spacing conventions",
+  "preserve": [
+    "Cultivated systems direction",
+    "Existing typography",
+    "Existing OKLCH palette",
+    "Existing asymmetric editorial structure",
+    "Existing responsive and reduced-motion behavior"
+  ]
+}

@@ -1,3 +1,4 @@
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 · genre: modern-minimal · macrostructure: Split Studio · tone: technical · theme: Garden · anchor: forest · enrichment: E2 · nav: N1b · footer: Ft1 · contrast: pass (40–41) · slop: pass (42–45) · honest: pass (46) · chrome: pass (47) · responsive: pass (49) · icons: pass (30) · mobile: pass (34, 49–57) */
 @import "tailwindcss";
 @import "@fontsource-variable/bricolage-grotesque";
 @import "@fontsource-variable/fira-code";
@@ -52,10 +53,14 @@
 @layer base {
   * { box-sizing: border-box; }
 
-  html { scroll-padding-top: 6rem; }
+  html {
+    overflow-x: clip;
+    scroll-padding-top: 6rem;
+  }
 
   body {
     min-width: 20rem;
+    overflow-x: clip;
     margin: 0;
     color: var(--ink);
     background: var(--paper);
