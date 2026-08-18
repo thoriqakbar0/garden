@@ -31,15 +31,30 @@ func TestNormalizeModelIDOnlyStripsMatchingNativeProvider(t *testing.T) {
 	}
 }
 
-func TestProviderProfilesDeclareCapabilities(t *testing.T) {
-	for _, id := range []providerID{
-		providerOpenAI, providerCompatible, providerAnthropic, providerGoogle,
-	} {
-		profile, ok := providerProfiles[id]
-		if !ok || profile.ID != id || profile.API == "" ||
-			!profile.Capabilities.NativeTools || !profile.Capabilities.Usage {
-			t.Fatalf("provider profile %q = %#v", id, profile)
-		}
+func TestMetadataForMapsEveryProviderToItsAPI(t *testing.T) {
+	tests := []struct {
+		provider providerID
+		wantAPI  string
+	}{
+		{provider: providerOpenAI, wantAPI: "openai-chat-completions"},
+		{provider: providerCompatible, wantAPI: "openai-chat-completions"},
+		{provider: providerAnthropic, wantAPI: "anthropic-messages"},
+		{provider: providerGoogle, wantAPI: "google-generate-content"},
+	}
+	for _, test := range tests {
+		t.Run(string(test.provider), func(t *testing.T) {
+			got := metadataFor(test.provider, "test-model")
+			if got.Provider != test.provider || got.API != test.wantAPI || got.Model != "test-model" {
+				t.Fatalf("metadataFor(%q) = %#v", test.provider, got)
+			}
+		})
+	}
+}
+
+func TestMetadataForUnknownProviderOmitsProviderIdentity(t *testing.T) {
+	got := metadataFor(providerID("unknown"), "test-model")
+	if got.Provider != "" || got.API != "" || got.Model != "test-model" {
+		t.Fatalf("metadataFor(unknown) = %#v", got)
 	}
 }
 
