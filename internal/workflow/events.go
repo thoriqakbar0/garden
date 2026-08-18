@@ -128,13 +128,22 @@ type actionResultData struct {
 	Status string         `json:"status"`
 }
 
+type runnerStepPhase uint8
+
+const (
+	stepPhaseStarted runnerStepPhase = iota
+	stepPhaseMessageStreaming
+	stepPhaseMessageCompleted
+	stepPhaseActionsRequested
+	stepPhaseActionsRequestedMessageStreaming
+	stepPhaseActionsRequestedMessageCompleted
+	stepPhaseCompletedToolCalls
+	stepPhaseCompletedFinal
+	stepPhaseFailed
+)
+
 type runnerStepState struct {
-	actionsRequested bool
-	completed        bool
-	finishReason     string
-	messageAppended  bool
-	messageCompleted bool
-	terminal         bool
+	phase runnerStepPhase
 }
 
 type runnerEventSequence struct {
@@ -169,33 +178,60 @@ func (sequence *runnerEventSequence) accept(event RunnerEvent, turn Turn) bool {
 		}
 		if sequence.nextStep > 0 {
 			previous := sequence.steps[sequence.nextStep-1]
-			if !previous.completed || previous.finishReason != "tool-calls" {
+			if previous.phase != stepPhaseCompletedToolCalls {
 				return false
 			}
 		}
-		sequence.steps[event.step.StepIndex] = &runnerStepState{}
+		sequence.steps[event.step.StepIndex] = &runnerStepState{phase: stepPhaseStarted}
 		sequence.nextStep++
 		return true
 	case stepFailedData:
-		if !exists || step.terminal || step.actionsRequested {
+		if !exists || (step.phase != stepPhaseStarted &&
+			step.phase != stepPhaseMessageStreaming &&
+			step.phase != stepPhaseMessageCompleted) {
 			return false
 		}
-		step.terminal = true
+		step.phase = stepPhaseFailed
 		return true
 	case messageAppendedData:
-		if !exists || step.terminal || step.messageCompleted {
+		if !exists {
 			return false
 		}
-		step.messageAppended = true
+		switch step.phase {
+		case stepPhaseStarted, stepPhaseMessageStreaming:
+			step.phase = stepPhaseMessageStreaming
+		case stepPhaseActionsRequested, stepPhaseActionsRequestedMessageStreaming:
+			step.phase = stepPhaseActionsRequestedMessageStreaming
+		default:
+			return false
+		}
 		return true
 	case messageCompletedData:
-		if !exists || step.terminal || !step.messageAppended || step.messageCompleted {
+		if !exists {
 			return false
 		}
-		step.messageCompleted = true
+		switch step.phase {
+		case stepPhaseMessageStreaming:
+			step.phase = stepPhaseMessageCompleted
+		case stepPhaseActionsRequestedMessageStreaming:
+			step.phase = stepPhaseActionsRequestedMessageCompleted
+		default:
+			return false
+		}
 		return true
 	case actionsRequestedData:
-		if !exists || step.terminal || step.actionsRequested {
+		if !exists {
+			return false
+		}
+		var nextPhase runnerStepPhase
+		switch step.phase {
+		case stepPhaseStarted:
+			nextPhase = stepPhaseActionsRequested
+		case stepPhaseMessageStreaming:
+			nextPhase = stepPhaseActionsRequestedMessageStreaming
+		case stepPhaseMessageCompleted:
+			nextPhase = stepPhaseActionsRequestedMessageCompleted
+		default:
 			return false
 		}
 		batch := make(map[string]ActionRequest, len(data.Actions))
@@ -215,25 +251,27 @@ func (sequence *runnerEventSequence) accept(event RunnerEvent, turn Turn) bool {
 			}
 			sequence.seenActions[callID] = struct{}{}
 		}
-		step.actionsRequested = true
+		step.phase = nextPhase
 		return true
 	case stepCompletedData:
-		if !exists || step.terminal {
+		if !exists {
 			return false
 		}
 		if data.FinishReason == "tool-calls" {
-			if !step.actionsRequested {
+			if step.phase != stepPhaseActionsRequested &&
+				step.phase != stepPhaseActionsRequestedMessageStreaming &&
+				step.phase != stepPhaseActionsRequestedMessageCompleted {
 				return false
 			}
-		} else if step.actionsRequested || !step.messageCompleted {
+			step.phase = stepPhaseCompletedToolCalls
+		} else if step.phase == stepPhaseMessageCompleted {
+			step.phase = stepPhaseCompletedFinal
+		} else {
 			return false
 		}
-		step.completed = true
-		step.finishReason = data.FinishReason
-		step.terminal = true
 		return true
 	case actionResultData:
-		if !exists || !step.completed || step.finishReason != "tool-calls" {
+		if !exists || step.phase != stepPhaseCompletedToolCalls {
 			return false
 		}
 		request, requested := sequence.pending[data.Result.CallID]
@@ -252,7 +290,7 @@ func (sequence *runnerEventSequence) complete() bool {
 		return false
 	}
 	last := sequence.steps[sequence.nextStep-1]
-	return last.completed && last.finishReason != "tool-calls"
+	return last.phase == stepPhaseCompletedFinal
 }
 
 func (sequence *runnerEventSequence) empty() bool {
