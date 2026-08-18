@@ -109,6 +109,118 @@ func TestCommandHelpSucceeds(t *testing.T) {
 	}
 }
 
+func TestInitCreatesAgentProject(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "project")
+	var output strings.Builder
+	if err := run(
+		[]string{"init", root},
+		commandStreams{stdout: &output, stderr: io.Discard},
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	wantFiles := map[string]string{
+		"agent/instructions.md": "# Identity\n\nYou are a helpful assistant.\n",
+		"agent/agent.ts":        "export default { model: \"openai/gpt-5.4-mini\" };\n",
+	}
+	for name, want := range wantFiles {
+		path := filepath.Join(root, name)
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		if string(contents) != want {
+			t.Fatalf("%s contents = %q", name, contents)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat %s: %v", name, err)
+		}
+		if info.Mode().Perm() != 0o644 {
+			t.Fatalf("%s permissions = %o", name, info.Mode().Perm())
+		}
+	}
+	if output.String() != "initialized "+root+"\n" {
+		t.Fatalf("init output = %q", output.String())
+	}
+}
+
+func TestInitPreflightsAllTargetCollisions(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing string
+		absent   string
+	}{
+		{
+			name:     "instructions collision",
+			existing: "agent/instructions.md",
+			absent:   "agent/agent.ts",
+		},
+		{
+			name:     "agent collision",
+			existing: "agent/agent.ts",
+			absent:   "agent/instructions.md",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			existingPath := filepath.Join(root, tt.existing)
+			if err := os.MkdirAll(filepath.Dir(existingPath), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			const original = "keep this content\n"
+			if err := os.WriteFile(existingPath, []byte(original), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			err := run(
+				[]string{"init", root},
+				commandStreams{stdout: io.Discard, stderr: io.Discard},
+			)
+			if err == nil || err.Error() != existingPath+" already exists" {
+				t.Fatalf("init error = %v", err)
+			}
+			contents, readErr := os.ReadFile(existingPath)
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if string(contents) != original {
+				t.Fatalf("existing contents = %q", contents)
+			}
+			if _, statErr := os.Stat(filepath.Join(root, tt.absent)); !errors.Is(statErr, os.ErrNotExist) {
+				t.Fatalf("absent target stat error = %v", statErr)
+			}
+		})
+	}
+}
+
+func TestInitRejectsDanglingTargetSymlink(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(t.TempDir(), "outside-project")
+	link := filepath.Join(root, "agent", "instructions.md")
+	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+
+	err := run(
+		[]string{"init", root},
+		commandStreams{stdout: io.Discard, stderr: io.Discard},
+	)
+	if err == nil || err.Error() != link+" already exists" {
+		t.Fatalf("init error = %v", err)
+	}
+	if _, statErr := os.Stat(target); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("symlink target stat error = %v", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "agent", "agent.ts")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("absent target stat error = %v", statErr)
+	}
+}
+
 type failingWriter struct{}
 
 func (failingWriter) Write([]byte) (int, error) {

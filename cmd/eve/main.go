@@ -118,21 +118,27 @@ func initProject(args []string, streams commandStreams) error {
 	} else if flags.NArg() > 1 {
 		return errors.New("init accepts at most one directory")
 	}
-	files := map[string]string{
-		"agent/instructions.md": "# Identity\n\nYou are a helpful assistant.\n",
-		"agent/agent.ts":        "export default { model: \"openai/gpt-5.4-mini\" };\n",
+	files := []struct {
+		name     string
+		contents string
+	}{
+		{name: "agent/instructions.md", contents: "# Identity\n\nYou are a helpful assistant.\n"},
+		{name: "agent/agent.ts", contents: "export default { model: \"openai/gpt-5.4-mini\" };\n"},
 	}
-	for name, contents := range files {
-		path := filepath.Join(root, name)
-		if _, err := os.Stat(path); err == nil {
+	for _, file := range files {
+		path := filepath.Join(root, file.name)
+		if _, err := os.Lstat(path); err == nil {
 			return fmt.Errorf("%s already exists", path)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
+	}
+	for _, file := range files {
+		path := filepath.Join(root, file.name)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(file.contents), 0o644); err != nil {
 			return err
 		}
 	}
