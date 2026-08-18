@@ -195,6 +195,32 @@ func TestInitPreflightsAllTargetCollisions(t *testing.T) {
 	}
 }
 
+func TestInitRejectsDanglingTargetSymlink(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(t.TempDir(), "outside-project")
+	link := filepath.Join(root, "agent", "instructions.md")
+	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+
+	err := run(
+		[]string{"init", root},
+		commandStreams{stdout: io.Discard, stderr: io.Discard},
+	)
+	if err == nil || err.Error() != link+" already exists" {
+		t.Fatalf("init error = %v", err)
+	}
+	if _, statErr := os.Stat(target); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("symlink target stat error = %v", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "agent", "agent.ts")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("absent target stat error = %v", statErr)
+	}
+}
+
 type failingWriter struct{}
 
 func (failingWriter) Write([]byte) (int, error) {
