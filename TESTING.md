@@ -95,159 +95,24 @@ For authenticated Cloudflare AI Gateway `/compat`, also set
   gates. Their request shapes, headers, tool-result correlation, provider
   metadata, usage normalization, and error safety are covered hermetically.
 
-## Complete Go test inventory
+## Go suite boundaries
 
-The authoritative live inventory is `make list-tests`. At this revision there
-are 95 top-level tests; table-driven subcases add further scenarios.
+`make list-tests` is the sole authoritative inventory of top-level Go tests,
+fuzz targets, and benchmarks. It reads the current package graph and source, so
+new or renamed tests do not require a documentation update.
 
-### `cmd/eve/main_test.go` (10)
+The suite remains organized around these evidence boundaries:
 
-- `TestHelpDocumentsGardenInstallation`
-- `TestUnknownCommandReturnsGardenUsage`
-- `TestHelpReportsOutputFailure`
-- `TestCommandHelpSucceeds`
-- `TestAuthenticatedHandlerRequiresTokenForPublicBind`
-- `TestServeDefaultsToLoopback`
-- `TestServeSelectsOfficialEveRuntimeExplicitly`
-- `TestAuthenticatedHandlerProtectsPublicBind`
-- `TestAuthenticatedHandlerLeavesLoopbackLocal`
-- `TestConfiguredTokenAlsoProtectsLoopback`
+| Area | Source boundary | Evidence |
+| --- | --- | --- |
+| CLI | `cmd/eve/*_test.go` | Command behavior, authentication, runtime selection, and the official Eve subprocess |
+| Example | `examples/eve-weather/*_test.go` | A representative Eve-shaped project remains discoverable and runnable |
+| Agent runtime | `internal/agent/*_test.go` | Provider adapters, tool lifecycles, metadata, safety, cancellation, and Codex execution |
+| Differential contracts | `internal/contracttest/*_test.go` | Garden behavior against externally started official Eve fixtures when both URLs are set |
+| Discovery | `internal/discover/*_test.go` | Filesystem contract discovery and invalid project rejection |
+| Official Eve host | `internal/evehost/*_test.go` | Pinned runtime validation, process lifecycle, and environment-gated official integration |
+| Server | `internal/server/*_test.go` | Public Eve protocol behavior, redaction, streaming, cancellation, and scheduling |
+| Workflow | `internal/workflow/*_test.go` | Persistence, replay, concurrency, recovery, migration, and lifecycle invariants |
 
-### `cmd/eve/official_cli_integration_test.go` (1)
-
-- `TestGardenBinaryHostsOfficialEveEndToEnd`
-
-### `examples/eve-weather/example_test.go` (1)
-
-- `TestOfficialEveShapeIsRunnableByGarden`
-
-### `internal/agent/agent_test.go` (16)
-
-- `TestOpenAIWeatherToolRoundTrip`
-- `TestOpenAIMetadataIsNormalized`
-- `TestOpenAICompatibleMetadataAndUsageRemainDurable`
-- `TestRunnerEmitsEveToolLifecycle`
-- `TestRunnerEmitsNormalizedProviderMetadata`
-- `TestConversationExcludesInterruptedTurns`
-- `TestRejectsUnimplementedAndUndeclaredTools`
-- `TestRejectsMalformedAndDuplicateToolCalls`
-- `TestOpenAIToolArgumentsAcceptProviderDoubleEncoding`
-- `TestCloudflareGatewayTokenHeader`
-- `TestCancellationReachesModelAndTool`
-- `TestUpstreamErrorsDoNotLeakSecrets`
-- `TestToolErrorsAndPayloadLimitsAreSafe`
-- `TestConfigurationIsExplicit`
-- `TestCompletedHistoryIsSentInSessionOrder`
-- `TestModelRoundsAreCapped`
-
-### `internal/agent/anthropic_test.go` (4)
-
-- `TestAnthropicMessagesToolRoundTripAndMetadata`
-- `TestAnthropicMessagesTextAndStopReason`
-- `TestAnthropicMessagesErrorsAreSafeAndBounded`
-- `TestAnthropicMessagesCancellation`
-
-### `internal/agent/google_test.go` (5)
-
-- `TestGoogleGenerateContentToolRoundTrip`
-- `TestGoogleBuildsModelEndpointAndKeepsKeyOutOfURL`
-- `TestGoogleToolCallIDsAreUniqueDuringConcurrentCalls`
-- `TestGoogleErrorsAreSafeAndCancellationPropagates`
-- `TestGoogleRejectsInvalidHistoryAndResponsePayloads`
-
-### `internal/agent/native_provider_contract_test.go` (1)
-
-- `TestNativeProviderToolContinuationContract`
-
-### `internal/agent/provider_test.go` (5)
-
-- `TestNormalizeModelIDOnlyStripsMatchingNativeProvider`
-- `TestProviderProfilesDeclareCapabilities`
-- `TestProviderStopReasonsAreStrict`
-- `TestProviderConfigurationSelectsNativeAdapters`
-- `TestNativeProviderConfigurationRequiresCredentials`
-
-### `internal/agent/codex_exec_test.go` (9)
-
-- `TestCodexExecRunsTerminalInsideSandbox`
-- `TestCodexExecConfigurationIsSandboxed`
-- `TestCodexExecReportsEarlyProcessExit`
-- `TestRuntimeSelectsCodexExecBackend`
-- `TestRuntimeAutoDetectsCodexExecBackend`
-- `TestRuntimeRequiresBackendWhenCodexIsMissing`
-- `TestRuntimeDoesNotOverrideExplicitBackend`
-- `TestCodexExecPromptCarriesCompletedConversation`
-- `TestCodexExecPropagatesCancellation`
-
-### `internal/contracttest/official_test.go` (2)
-
-- `TestOfficialEveConversationContract`
-- `TestOfficialEveCancellationContract`
-
-### `internal/discover/discover_test.go` (2)
-
-- `TestApplicationAtDiscoversFilesystemContract`
-- `TestApplicationAtRejectsDuplicateScheduleIDs`
-
-### `internal/evehost/host_test.go` (8)
-
-- `TestHostRunsPinnedProjectLocalEve`
-- `TestHostRejectsUnpinnedEve`
-- `TestHostRequiresProjectLocalEve`
-- `TestHostRejectsCLIOutsideNodeModules`
-- `TestHostRejectsNonExecutableCLI`
-- `TestHostRejectsInvalidAddress`
-- `TestHostDoesNotStartWithCancelledContext`
-- `TestHostCancellationStopsEveProcess`
-
-### `internal/evehost/official_integration_test.go` (1)
-
-- `TestOfficialEveAuthoredTypeScriptAndSandboxTerminal`
-
-### `internal/server/projection_internal_test.go` (1)
-
-- `TestPublicEventStripsGardenProviderMetadata`
-
-### `internal/server/server_test.go` (7)
-
-- `TestGardenPassesSharedEveConversationContract`
-- `TestGardenPassesSharedEveCancellationContract`
-- `TestToolInternalsStayOffPublicStreamAndCursor`
-- `TestStreamDisconnectDoesNotCancelActiveTurn`
-- `TestCancelValidationMatchesEve`
-- `TestScheduleDispatchUsesDiscoveredIdentifier`
-- `TestInfoRedactsProjectRootAndInstructions`
-
-### `internal/workflow/cancel_emit_order_test.go` (1)
-
-- `TestAcceptedCancelRejectsEmitAlreadyWaitingToAppend`
-
-### `internal/workflow/legacy_protocol_test.go` (1)
-
-- `TestMigratedLegacyMessageHasCanonicalPublicLifecycle`
-
-### `internal/workflow/recovery_invariants_test.go` (1)
-
-- `TestOpenRejectsRecoveryInvariantViolations`
-
-### `internal/workflow/store_test.go` (19)
-
-- `TestSequentialTurnsPersistAndReplay`
-- `TestConcurrentSessionsRemainIsolated`
-- `TestCancellationConsumesStaleGuardWithoutCancellingActiveTurn`
-- `TestSessionIDCannotEscapeStore`
-- `TestContinuationTokenSelectsOwnerAndCreatesUnownedSession`
-- `TestReplaySupportsTailRelativeCursor`
-- `TestStoreAllowsOnlyOneWriter`
-- `TestCloseWakesEventWaiters`
-- `TestOpenSessionRootCannotBeRedirectedAfterStartup`
-- `TestConcurrentUnownedContinuationHasOneOwner`
-- `TestAcceptedCancellationWinsAgainstLateRunnerSuccess`
-- `TestOpenRejectsSymlinkedSessionLog`
-- `TestOpenRejectsSymlinkedSessionsDirectory`
-- `TestOpenRejectsCorruptLifecyclePayload`
-- `TestOpenRejectsCompletionAfterDurableCancellationIntent`
-- `TestOpenAtomicallyMigratesLegacySessionLog`
-- `TestOpenRepairsPartialTailAndSettlesInterruptedTurn`
-- `TestOpenRepairsMissingWaitingAfterDurableTerminal`
-- `TestOpenFinishesDurableCancellationIntent`
+Run `make list-tests` when an exact name is needed. Run `make test-hermetic` for
+the credential-free Go evidence, or use the commands above for stronger gates.
