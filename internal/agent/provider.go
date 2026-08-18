@@ -16,59 +16,11 @@ const (
 	providerGoogle     providerID = "google"
 )
 
-type providerCapabilities struct {
-	Streaming        bool
-	NativeTools      bool
-	Vision           bool
-	StructuredOutput bool
-	Reasoning        bool
-	Usage            bool
-	CacheUsage       bool
-}
-
-type providerProfile struct {
-	ID           providerID
-	API          string
-	Capabilities providerCapabilities
-}
-
-var providerProfiles = map[providerID]providerProfile{
-	providerOpenAI: {
-		ID:  providerOpenAI,
-		API: "openai-chat-completions",
-		Capabilities: providerCapabilities{
-			NativeTools: true,
-			Usage:       true,
-			CacheUsage:  true,
-		},
-	},
-	providerCompatible: {
-		ID:  providerCompatible,
-		API: "openai-chat-completions",
-		Capabilities: providerCapabilities{
-			NativeTools: true,
-			Usage:       true,
-			CacheUsage:  true,
-		},
-	},
-	providerAnthropic: {
-		ID:  providerAnthropic,
-		API: "anthropic-messages",
-		Capabilities: providerCapabilities{
-			NativeTools: true,
-			Usage:       true,
-			CacheUsage:  true,
-		},
-	},
-	providerGoogle: {
-		ID:  providerGoogle,
-		API: "google-generate-content",
-		Capabilities: providerCapabilities{
-			NativeTools: true,
-			Usage:       true,
-			CacheUsage:  true,
-		},
-	},
+var providerAPIs = map[providerID]string{
+	providerOpenAI:     "openai-chat-completions",
+	providerCompatible: "openai-chat-completions",
+	providerAnthropic:  "anthropic-messages",
+	providerGoogle:     "google-generate-content",
 }
 
 type modelUsage struct {
@@ -88,8 +40,11 @@ type modelMetadata struct {
 }
 
 func metadataFor(provider providerID, model string) modelMetadata {
-	profile := providerProfiles[provider]
-	return modelMetadata{Provider: profile.ID, API: profile.API, Model: model}
+	api, ok := providerAPIs[provider]
+	if !ok {
+		return modelMetadata{Model: model}
+	}
+	return modelMetadata{Provider: provider, API: api, Model: model}
 }
 
 func normalizeStopReason(provider providerID, raw string, hasToolCalls bool) (string, error) {
